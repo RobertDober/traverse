@@ -7,7 +7,7 @@ defmodule Traverse.Mixfile do
      elixir: "~> 1.3",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps()]
+     deps: deps(Mix.env)]
   end
 
   # Configuration for the OTP application
@@ -26,7 +26,8 @@ defmodule Traverse.Mixfile do
   #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
   #
   # Type "mix help deps" for more examples and options
-  defp deps do
-    []
-  end
+  defp deps(:dev), do: [
+    {:ex_doc, "~> 0.13.0"}
+  ]
+  defp deps( _ ), do: []
 end
