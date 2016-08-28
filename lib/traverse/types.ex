@@ -9,6 +9,7 @@ defmodule Traverse.Types do
       @type t_simple_walker_fn :: (any, any -> any)
       @type t_structure_fn :: (any -> any)
       @type t_traverse_fn :: ({any, t_parent}, any -> t_next)
+      @type t_traceable_fn :: (any -> any) | (any, any -> any) | (any, any, any -> any)
     end
   end
 

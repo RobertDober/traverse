@@ -3,6 +3,9 @@ defmodule Traverse do
   use Traverse.Types
   use Traverse.Macros
 
+  defmodule Cut, do: defstruct acc: "boxed accumulator"
+  defmodule Fun, do: defstruct fun: "function to traverse the substructure", acc: "accumulator"
+
   @moduledoc """
   ## Traverse is a toolset to walk arbitrary Elixir Datastructures.
 
@@ -13,6 +16,27 @@ defmodule Traverse do
       ...>                    _,   acc                    -> acc       end
       ...>    Traverse.walk(ds, [], collector)
       [5, 4, 3, :c, 2, 1, :b, :a]
+
+   One can return the accumulator boxed in a `%Cut{}` struct to avoid traversal of the
+   subtree.
+
+      iex>   ds = [add: [1, 2], ignore: [3, 4]]
+      ...>   collector = fn {:ignore, _}, acc        -> %Traverse.Cut{acc: acc}
+      ...>                  n, acc when is_number(n) -> [n|acc]
+      ...>                  _, acc                   -> acc end
+      ...>   Traverse.walk(ds, [], collector)
+      [2, 1]
+
+  Instead of ignoring, we could have changed the traverse function for the subtree, which
+  would have been more inefficent but demonstrates a different technique:
+
+      iex>   ds = [add: [1, 2], ignore: [3, 4]]
+      ...>   pass_acc = fn _, acc -> acc end
+      ...>   collector = fn {:ignore, _}, acc        -> %Traverse.Fun{acc: acc, fun: pass_acc}
+      ...>                  n, acc when is_number(n) -> [n|acc]
+      ...>                  _, acc                   -> acc end
+      ...>   Traverse.walk(ds, [], collector)
+      [2, 1]
   """
 
   @spec walk( any, any, t_simple_walker_fn ) :: any
