@@ -2,19 +2,14 @@ defmodule Traverse.Tools do
 
   use Traverse.Types
 
-  @doc """
-  DEPRECATED
-  A convenience method to pass the accumulator through a substructure.
-  As soon as cutting substructures is available, this will go away.
-  """
-  def acc_for_pre do 
-    fn _fst, snd -> {snd} end
-  end
-
 
   @doc """
-  Utility to trace your traversals by passing your traversal function to this trace_wrapper
+  Utility to trace your traversals by passing your traversal function to this trace_wrapper.
+
+  Instead of passing `f` you can pass `make_trace_fn(f)` as long as f is of the correct type.
   """
+
+  @spec make_trace_fn( t_traceable_fn ) :: t_traceable_fn
   def make_trace_fn fun
 
   def make_trace_fn( fun ) when is_function(fun, 1) do
@@ -38,18 +33,4 @@ defmodule Traverse.Tools do
                   r
     end, do: f
   end
-
-  @doc """
-  The default structural tree interpretation for functions in `Traverse.Traverser`
-  """
-
-  def list_trees(any), do: fn any -> any end
-
-  @spec tuple_list_trees :: t_structure_fn
-  def tuple_list_trees do 
-     fn (tuple) when is_tuple(tuple) -> Tuple.to_list(tuple)
-                    anything         -> anything end
-    
-  end
-  
 end
