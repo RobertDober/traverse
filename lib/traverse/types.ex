@@ -7,7 +7,7 @@ defmodule Traverse.Types do
 
       @type t_parent      :: :list | :map | :tuple | nil
       @type t_simple_walker_fn :: (any, any -> any)
-      @type t_structure_fn :: (any -> list(any))
+      @type t_structure_fn :: (any -> any)
       @type t_traverse_fn :: ({any, t_parent}, any -> t_next)
     end
   end
