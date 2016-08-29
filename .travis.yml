@@ -1,0 +1,19 @@
+
+language: elixir
+sudo: false
+
+branches:
+  only:
+    - master
+    - development
+
+elixir:
+  - 1.3
+
+otp_release:
+  - 19.0
+
+env:
+  - MIX_ENV=test
+
+script: mix coveralls.travis
