@@ -4,7 +4,7 @@ defmodule Traverse.Mixfile do
 
   def project do
     [app: :traverse,
-     version: "0.1.0",
+     version: "0.1.1",
      elixir: "~> 1.3",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -36,7 +36,7 @@ defmodule Traverse.Mixfile do
 
   defp package do
     [
-      files:       [ "lib", "mix.exs", "README.md", "LICENSE" ],
+      files:       [ "lib", "tasks", "mix.exs", "README.md", "LICENSE" ],
       maintainers: [
                      "Robert Dober <robert.dober@gmail.com>"
                    ],

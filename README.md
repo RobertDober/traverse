@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/RobertDober/traverse.svg?branch=master)](https://travis-ci.org/RobertDober/traverse)
 [![Hex.pm](https://img.shields.io/hexpm/v/traverse.svg)](https://hex.pm/packages/traverse)
 [![Coverage Status](https://coveralls.io/repos/RobertDober/traverse/badge.png)](https://coveralls.io/r/RobertDober/traverse)
-[![Inline docs](http://inch-ci.org/github/RobertDober/traverse.svg)](http://inch-ci.org/github/RobertDober/traverse)
+[![Inline docs](http://inch-ci.org/github/RobertDober/traverse.svg?branch=master)](http://inch-ci.org/github/RobertDober/traverse)
 
 <!-- moduledoc: Traverse -->
 ## Traverse is a toolset to walk arbitrary Elixir Datastructures.
