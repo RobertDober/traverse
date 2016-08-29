@@ -4,7 +4,7 @@ defmodule Traverse.Mixfile do
 
   def project do
     [app: :traverse,
-     version: "0.1.1",
+     version: "0.1.2",
      elixir: "~> 1.3",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -25,12 +25,7 @@ defmodule Traverse.Mixfile do
 
   defp description do
     """
-    Traverse is a toolset to walk arbitrary Elixir Datastructures.
-
-    It allows for _uninformed_ traversal and for _informed_ or _structured_ traversal
-    as in trees.
-
-    There are convenience implementations for trees and for ASTs.
+    Traverse is a toolset to walk arbitrary Elixir Datastructures in a functional way.
     """
   end
 
