@@ -2,6 +2,7 @@ defmodule Traverse.WalkWCutTest do
   use ExUnit.Case
   import Traverse, only: [walk: 3]
 
+  doctest Traverse.Walker
 
   defmodule Evaluator do 
 

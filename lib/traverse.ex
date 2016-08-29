@@ -3,8 +3,13 @@ defmodule Traverse do
   use Traverse.Types
   use Traverse.Macros
 
-  defmodule Cut, do: defstruct acc: "boxed accumulator"
-  defmodule Fun, do: defstruct fun: "function to traverse the substructure", acc: "accumulator"
+  defmodule Cut do 
+    @moduledoc """
+    A wrapper around the accumulator value of the traversal function, which will
+    avoid recursive decent from this node on.
+    """
+    defstruct acc: "boxed accumulator"
+  end
 
   @moduledoc """
   ## Traverse is a toolset to walk arbitrary Elixir Datastructures.
