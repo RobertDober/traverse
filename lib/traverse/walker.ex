@@ -4,7 +4,7 @@ defmodule Traverse.Walker do
   alias Traverse.Cut
 
   @moduledoc """
-  Implements all the different traversal functions exposed by `Traverse`.
+    Implements traversal functions, structure is not maintained unless the traversal functions do so. 
   """
 
   @doc """

@@ -3,12 +3,28 @@ defmodule Traverse do
   use Traverse.Types
   use Traverse.Macros
 
-  defmodule Cut do 
+  defmodule Cut do
     @moduledoc """
     A wrapper around the accumulator value of the traversal function, which will
     avoid recursive decent from this node on.
     """
     defstruct acc: "boxed accumulator"
+  end
+
+  defmodule Ignore do
+    @moduledoc """
+      When a transformer function returns this value the transformation of the
+      containing datastructure will not contain it, in case the containing datastructure is
+      a map the key is omitted in the transformation.
+
+      iex> Traverse.map([1, 2, %{a: 1}, {1, 2}], fn _ -> Traverse.Ignore end)
+      [%{}, {}]
+    """
+    @doc """
+      Lackmus to decide if an argument is to be ignored, or, in other words, is me.
+    """
+    def me?(__MODULE__), do: true
+    def me?(_), do: false
   end
 
   @moduledoc """
@@ -34,7 +50,11 @@ defmodule Traverse do
   """
 
   @spec walk( any, any, t_simple_walker_fn ) :: any
-  def walk( ds, initial_acc, walker_fn ), 
+  def walk( ds, initial_acc, walker_fn ),
     do: Traverse.Walker.walk(ds, initial_acc, walker_fn)
+
+  @spec map( any, t_simple_mapper_fn ) :: any
+  def map( ds, mapper_fn ),
+    do: Traverse.Mapper.map(ds, mapper_fn)
 
 end
