@@ -1,4 +1,4 @@
-defmodule Traverse.Mapper.Mapall.PreTest do
+defmodule Traverse.Mapper.Mapall.PostTest do
   use ExUnit.Case
 
   describe "Traverse.mapall(post: false) empty cases" do
@@ -72,7 +72,7 @@ defmodule Traverse.Mapper.Mapall.PreTest do
     end
   end
 
-  defp mapall(ds, f), do: Traverse.mapall(ds, f)
+  defp mapall(ds, f), do: Traverse.mapall(ds, f, post: true)
 
   defp identity, do: fn x -> x end
   defp inc, do: fn x -> x + 1 end

@@ -77,11 +77,17 @@ defmodule Traverse do
 
     iex> [1, [[]], 2, [3, []]]
     ...> |> Traverse.mapall(fn [] -> Traverse.Ignore end)
-    [1, 2, [3]]
+    [1, [], 2, [3]]
 
     This example shows that `mapall` applies a prewalk strategy by default, we can
     change this by providing the option `post: true`.
 
+    iex> [1, [[]], 2, [3, []]]
+    ...> |> Traverse.mapall(fn [] -> Traverse.Ignore end, post: true)
+    [1, 2, [3]]
+    
+    Now, by applying the transformation after having transformed the substructure, empty lists
+    of empty lists go away too.
   """
   @spec mapall( any, t_simple_mapper_fn, Keyword.t ) :: any
   def mapall( ds, mapper_fn , options \\ []),
