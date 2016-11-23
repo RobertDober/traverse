@@ -27,7 +27,7 @@ defmodule Traverse do
     def me?(_), do: false
   end
 
-  @moduledoc """
+  @doc """
   ## Traverse is a toolset to walk arbitrary Elixir Datastructures.
 
   `walk` visits all substructures down to atomic elements.
@@ -60,10 +60,10 @@ defmodule Traverse do
     are mapped to false. In other words we need to define the filter functions only
     for structures and values we want to keep.
 
-        # iex> number_arrays = fn x when is_number(x) -> true
-        # ...>                    l when is_list(l)   -> true end
-        # ...> Traverse.filter([:a, {1, 2}, 3, [4, :b]], number_arrays)
-        # [3, [4]]
+        iex> number_arrays = fn x when is_number(x) -> true
+        ...>                    l when is_list(l)   -> true end
+        ...> Traverse.filter([:a, {1, 2}, 3, [4, :b]], number_arrays)
+        [3, [4]]
 
     The same result can be achieved with `mapall` and `Traverse.Ignore` if that suits
     your style better:
