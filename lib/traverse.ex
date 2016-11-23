@@ -53,10 +53,54 @@ defmodule Traverse do
   def walk( ds, initial_acc, walker_fn ),
     do: Traverse.Walker.walk(ds, initial_acc, walker_fn)
 
+  @doc """
+    filter allows to filter arbitrary substructures according to a filter function.
+
+    The filter function does not need to be completely defined, undefined values
+    are mapped to false. In other words we need to define the filter functions only
+    for structures and values we want to keep.
+
+        # iex> number_arrays = fn x when is_number(x) -> true
+        # ...>                    l when is_list(l)   -> true end
+        # ...> Traverse.filter([:a, {1, 2}, 3, [4, :b]], number_arrays)
+        # [3, [4]]
+
+    The same result can be achieved with `mapall` and `Traverse.Ignore` if that suits
+    your style better:
+
+        iex> not_number_arrays = fn x when is_number(x) or is_list(x) -> x
+        ...>                    _   -> Traverse.Ignore end
+        ...> Traverse.mapall([:a, {1, 2}, 3, [4, :b]], not_number_arrays)
+        [3, [4]]
+
+  """
   @spec filter( any, t_simple_filter_fn ) :: any
   def filter(ds, filter_fn),
-    do: Traverse.Mapper.filter(ds, filter_fn)
+    do: Traverse.Filter.filter(ds, filter_fn)
 
+  @doc """
+    map preserves structure, that is lists remain lists, tuples remain tuples and
+    maps remain maps with the same keys, unless the transformation returns `Traverse.Ignore` (c.f. `map1` if you want to transform key
+    value pairs in maps)
+
+    In order to avoid putting unnecessary burden on the transformer function it can only be partially defined, and it will be completed
+    with the identity function for undefined parameters. Here is an example.
+
+        iex> Traverse.map([:a, 1, {:b, 2}], fn x when is_number(x) -> x + 1 end)
+        [:a, 2, {:b, 3}]
+
+    The transformer function can also return the special value `Traverse.Ignore`, which will remove the value from the result, and in
+    case of a map it will remove the key, value pair.
+
+        iex> require Integer
+        ...> no_odds = fn x when Integer.is_even(x) -> x * 2
+        ...>              _                 -> Traverse.Ignore end
+        ...> Traverse.map([1, %{a: 1, b: 2}, {3, 4}], no_odds)
+        [%{b: 4}, {8}]
+
+    The more general way to achieve this is to use `filter_map`, which however is less efficent as the filter function is also called
+    on inner nodes.
+  """
   @spec map( any, t_simple_mapper_fn ) :: any
   def map( ds, mapper_fn ),
     do: Traverse.Mapper.map(ds, mapper_fn)
@@ -92,4 +136,20 @@ defmodule Traverse do
   @spec mapall( any, t_simple_mapper_fn, Keyword.t ) :: any
   def mapall( ds, mapper_fn , options \\ []),
     do: Traverse.Mapper.mapall(ds, mapper_fn, Keyword.get(options, :post, false))
+
+  # @doc """
+  #   `zipfn` augments each node and leaf in the datastructure, replacing it with the pair
+  #   containing its original value and the result of the function applied to the node.
+
+  #   As very often we will be interested in only some specific values we can, as usually,
+  #   define a partial zip function, the `default` value is used to complete the zip
+  #   function with a constant function returning this value, the `default` defaults to nil.
+
+  #   iex> Tranverse.zip([1, {:a, 2}, %{b: 3, c: "hello"}],
+  #   ...>   fn x when is_number(x) -> x + 1 end)
+  #   [{1, 2}, {a: 2]end
+    
+  # """
+  # @spec zip( any, t_simple_mapper_fn, any ) :: any
+  # def zip(ds, zipfn, default \\ nil)
 end

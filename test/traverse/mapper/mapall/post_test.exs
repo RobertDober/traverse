@@ -74,7 +74,6 @@ defmodule Traverse.Mapper.Mapall.PostTest do
 
   defp mapall(ds, f), do: Traverse.mapall(ds, f, post: true)
 
-  defp identity, do: fn x -> x end
   defp inc, do: fn x -> x + 1 end
   defp safe_inc, do: fn x when is_number(x) -> x + 1 end
   defp const(c), do: fn _ -> c end
