@@ -61,6 +61,7 @@ defmodule Traverse.Fn do
         partial_fn.(arg)
       rescue
         FunctionClauseError -> with_fn.(arg)
+        ArgumentError -> with_fn.(arg)
       end
     end
   end
