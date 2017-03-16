@@ -9,7 +9,7 @@ defmodule Traverse.Mapper.Mapall.PostTest do
       assert mapall([], fn 1 -> 2 end) == []
     end
     test "list with error fn" do
-      assert mapall([], inc) == []
+      assert mapall([], inc()) == []
     end
     test "tuple with complete fn" do
       assert mapall({}, const(2)) == {}
@@ -18,7 +18,7 @@ defmodule Traverse.Mapper.Mapall.PostTest do
       assert mapall({}, fn 2 -> 3 end) == {}
     end
     test "tuple with error fn" do
-      assert mapall({}, inc) == {} 
+      assert mapall({}, inc()) == {} 
     end
     test "map with complete fn" do
       assert mapall(%{}, const(2)) == %{}
@@ -27,7 +27,7 @@ defmodule Traverse.Mapper.Mapall.PostTest do
       assert mapall(%{}, fn 2 -> 3 end) == %{}
     end
     test "map with error fn" do
-      assert mapall(%{}, inc) == %{} 
+      assert mapall(%{}, inc()) == %{} 
     end
   end
 
@@ -42,30 +42,30 @@ defmodule Traverse.Mapper.Mapall.PostTest do
       assert mapall("hello", fn 1 -> 4 end) == "hello"
     end
     test "string with error function" do
-      assert mapall("hello", inc) == "hello"
+      assert mapall("hello", inc()) == "hello"
     end
   end
 
   describe "Traverse.mapall(post: false) flat" do
     test "list with numbers" do
-      assert mapall([1, 2], inc) == [2, 3]
+      assert mapall([1, 2], inc()) == [2, 3]
     end
     test "mixed list" do
-      assert mapall([1, :a, 2], safe_inc) == [2, :a, 3]
+      assert mapall([1, :a, 2], safe_inc()) == [2, :a, 3]
     end
     test "string with error function" do
       assert_raise( ArithmeticError, fn ->
-        mapall({"hello"}, inc)
+        mapall({"hello"}, inc())
       end)
     end
   end
 
   describe "deep" do
     test "safe incrementing" do
-      assert mapall([1, {:a, 2}, %{a: [3, {}, 4]}], safe_inc) == [2, {:a, 3}, %{a: [4, {}, 5]}]
+      assert mapall([1, {:a, 2}, %{a: [3, {}, 4]}], safe_inc()) == [2, {:a, 3}, %{a: [4, {}, 5]}]
     end
     test "not touching keys" do
-      assert mapall([1, {:a, 2}, %{0 => [3, {}, 4]}], safe_inc) == [2, {:a, 3}, %{0 => [4, {}, 5]}]
+      assert mapall([1, {:a, 2}, %{0 => [3, {}, 4]}], safe_inc()) == [2, {:a, 3}, %{0 => [4, {}, 5]}]
     end
     test "transform tuples and remove empty lists" do
       assert mapall({ [], :a, {[], [2]} }, &trans/1) == { :a, [[2]] }
