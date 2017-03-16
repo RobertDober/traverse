@@ -61,6 +61,7 @@ defmodule Traverse.Fn do
         partial_fn.(arg)
       rescue
         FunctionClauseError -> with_fn.(arg)
+        ArgumentError -> with_fn.(arg)
       end
     end
   end
@@ -77,7 +78,7 @@ defmodule Traverse.Fn do
     Convenience function as described in doc of `complete`.
   """
   @spec complete_with_identity((any -> any)) :: (any -> any)
-  def complete_with_identity(partial_fn), do: complete(partial_fn, identity)
+  def complete_with_identity(partial_fn), do: complete(partial_fn, identity())
 
   @doc """
     Convenience function as described in doc of `complete`.
