@@ -70,6 +70,9 @@ defmodule Traverse.Mapper.Mapall.PostTest do
     test "transform tuples and remove empty lists" do
       assert mapall({ [], :a, {[], [2]} }, &trans/1) == { :a, [[2]] }
     end
+    test "remove empty lists from maps" do
+      assert mapall(%{a: [], b: {"hello"}}, &trans/1) == %{b: ["hello"]}
+    end
   end
 
   defp mapall(ds, f), do: Traverse.mapall(ds, f, post: true)
