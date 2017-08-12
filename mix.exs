@@ -4,8 +4,8 @@ defmodule Traverse.Mixfile do
 
   def project do
     [app: :traverse,
-     version: "0.1.3",
-     elixir: "~> 1.4",
+     version: "0.1.4",
+     elixir: "~> 1.5.1",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      elixirc_paths: elixirc_paths(Mix.env),
@@ -44,8 +44,8 @@ defmodule Traverse.Mixfile do
 
   defp deps do
     [
-      {:ex_doc, ">= 0.13.0", only: :dev},
-      {:excoveralls, "~> 0.5", only: :test},
+      {:ex_doc, ">= 0.16.2", only: :dev},
+      {:excoveralls, "~> 0.7.2", only: :test},
     ]
   end
 

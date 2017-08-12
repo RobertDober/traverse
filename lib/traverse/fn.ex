@@ -18,7 +18,7 @@ defmodule Traverse.Fn do
     Allows to complete a partial function
 
         iex> partial = fn x when is_number(x) -> x + 1 end
-        ...> complete =  Traverse.Fn.complete(partial, Traverse.Fn.identity)
+        ...> complete =  Traverse.Fn.complete(partial, Traverse.Fn.identity())
         ...> Enum.map([1, :a, []], complete)
         [2, :a, []]
 
@@ -78,7 +78,7 @@ defmodule Traverse.Fn do
     Convenience function as described in doc of `complete`.
   """
   @spec complete_with_identity((any -> any)) :: (any -> any)
-  def complete_with_identity(partial_fn), do: complete(partial_fn, identity)
+  def complete_with_identity(partial_fn), do: complete(partial_fn, identity())
 
   @doc """
     Convenience function as described in doc of `complete`.
@@ -89,7 +89,7 @@ defmodule Traverse.Fn do
   @doc """
     A convenience declaration of the identity function.
 
-        iex> Traverse.Fn.identity.(42)
+        iex> Traverse.Fn.identity().(42)
         42
   """
   @spec identity :: (any -> any)
