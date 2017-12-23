@@ -9,9 +9,11 @@ branches:
 
 elixir:
   - 1.5.1
+  - 1.5.3
 
 otp_release:
   - 20.0
+  - 20.1
 
 env:
   - MIX_ENV=test
