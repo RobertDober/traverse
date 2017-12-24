@@ -27,7 +27,7 @@ defmodule Traverse do
     def me?(_), do: false
   end
 
-  @doc """
+  @moduledoc """
   ## Traverse is a toolset to walk arbitrary Elixir Datastructures.
 
   `walk` visits all substructures down to atomic elements.
@@ -47,13 +47,7 @@ defmodule Traverse do
       ...>                  _, acc                   -> acc end
       ...>   Traverse.walk(ds, [], collector)
       [2, 1]
-  """
 
-  @spec walk( any, any, t_simple_walker_fn ) :: any
-  def walk( ds, initial_acc, walker_fn ),
-    do: Traverse.Walker.walk(ds, initial_acc, walker_fn)
-
-  @doc """
     filter allows to filter arbitrary substructures according to a filter function.
 
     The filter function does not need to be completely defined, undefined values
@@ -73,12 +67,6 @@ defmodule Traverse do
         ...> Traverse.mapall([:a, {1, 2}, 3, [4, :b]], not_number_arrays)
         [3, [4]]
 
-  """
-  @spec filter( any, t_simple_filter_fn ) :: any
-  def filter(ds, filter_fn),
-    do: Traverse.Filter.filter(ds, filter_fn)
-
-  @doc """
     map preserves structure, that is lists remain lists, tuples remain tuples and
     maps remain maps with the same keys, unless the transformation returns `Traverse.Ignore` (c.f. `map1` if you want to transform key
     value pairs in maps)
@@ -100,12 +88,7 @@ defmodule Traverse do
 
     The more general way to achieve this is to use `filter_map`, which however is less efficent as the filter function is also called
     on inner nodes.
-  """
-  @spec map( any, t_simple_mapper_fn ) :: any
-  def map( ds, mapper_fn ),
-    do: Traverse.Mapper.map(ds, mapper_fn)
 
-  @doc """
     `mapall` like `map` perserves the structure of the datastructure passed in.
 
     However it also calls the `transformer` function for inner nodes, which allows
@@ -119,20 +102,33 @@ defmodule Traverse do
 
     Here is a simple example that eliminates empty sublists
 
-    iex> [1, [[]], 2, [3, []]]
-    ...> |> Traverse.mapall(fn [] -> Traverse.Ignore end)
-    [1, [], 2, [3]]
+        iex> [1, [[]], 2, [3, []]]
+        ...> |> Traverse.mapall(fn [] -> Traverse.Ignore end)
+        [1, [], 2, [3]]
 
     This example shows that `mapall` applies a prewalk strategy by default, we can
     change this by providing the option `post: true`.
 
-    iex> [1, [[]], 2, [3, []]]
-    ...> |> Traverse.mapall(fn [] -> Traverse.Ignore end, post: true)
-    [1, 2, [3]]
+        iex> [1, [[]], 2, [3, []]]
+        ...> |> Traverse.mapall(fn [] -> Traverse.Ignore end, post: true)
+        [1, 2, [3]]
     
     Now, by applying the transformation after having transformed the substructure, empty lists
     of empty lists go away too.
   """
+
+  @spec walk( any, any, t_simple_walker_fn ) :: any
+  def walk( ds, initial_acc, walker_fn ),
+    do: Traverse.Walker.walk(ds, initial_acc, walker_fn)
+
+  @spec filter( any, t_simple_filter_fn ) :: any
+  def filter(ds, filter_fn),
+    do: Traverse.Filter.filter(ds, filter_fn)
+
+  @spec map( any, t_simple_mapper_fn ) :: any
+  def map( ds, mapper_fn ),
+    do: Traverse.Mapper.map(ds, mapper_fn)
+
   @spec mapall( any, t_simple_mapper_fn, Keyword.t ) :: any
   def mapall( ds, mapper_fn , options \\ []),
     do: Traverse.Mapper.mapall(ds, mapper_fn, Keyword.get(options, :post, false))
