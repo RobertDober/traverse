@@ -1,10 +1,9 @@
-Code.eval_file "tasks/readme.exs"
 defmodule Traverse.Mixfile do
   use Mix.Project
 
   def project do
     [app: :traverse,
-     version: "0.1.5",
+     version: "0.1.6",
      elixir: "~> 1.5.1",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -44,9 +43,9 @@ defmodule Traverse.Mixfile do
 
   defp deps do
     [
-      {:ex_doc, ">= 0.16.2", only: :dev},
       {:excoveralls, "~> 0.7.2", only: :test},
       { :dialyxir, "~> 0.5", only: [ :dev, :test ] },
+      { :read_doc, "~> 0.1",  only: :dev, path: "/home/robert/log/elixir/read_doc" },
     ]
   end
 
