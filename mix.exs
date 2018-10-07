@@ -43,6 +43,7 @@ defmodule Traverse.Mixfile do
 
   defp deps do
     [
+      {:ex_doc, "~> 0.19", only: :dev},
       {:excoveralls, "~> 0.10", only: :test},
       { :dialyxir, "~> 0.5", only: [ :dev, :test ] },
       # { :read_doc, "~> 0.1",  only: :dev, path: "/home/robert/log/elixir/read_doc" },

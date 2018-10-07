@@ -16,7 +16,7 @@ defmodule Traverse.Macros do
            (ele, acc) when is_scalar(ele) -> some_update(ele, acc)
 
   """
-  defmacro is_scalar(x) do 
+  defmacro is_scalar(x) do
     quote do
       is_atom(unquote(x)) or is_number(unquote(x)) or is_binary(unquote(x))
     end

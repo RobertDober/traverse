@@ -1,5 +1,4 @@
 defmodule Traverse.Mapper do
-
   use Traverse.Types
 
   @moduledoc """
@@ -9,13 +8,14 @@ defmodule Traverse.Mapper do
   @doc """
     Implements `Traverse.map`
   """
-  @spec map( any, t_simple_mapper_fn ) :: any
+  @spec map(any, t_simple_mapper_fn) :: any
   def map(ds, transformer)
 
   def map(ds, transformer) when is_list(ds) do
     Enum.map(ds, &map(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
   end
+
   def map(ds, transformer) when is_tuple(ds) do
     ds
     |> Tuple.to_list()
@@ -23,10 +23,12 @@ defmodule Traverse.Mapper do
     |> Enum.reject(&Traverse.Ignore.me?/1)
     |> List.to_tuple()
   end
+
   def map(ds, transformer) when is_map(ds) do
-    ds |>
-    Enum.reduce(Map.new, fn {key, value}, acc ->
+    ds
+    |> Enum.reduce(Map.new(), fn {key, value}, acc ->
       val = map(value, transformer)
+
       if Traverse.Ignore.me?(val) do
         acc
       else
@@ -34,12 +36,13 @@ defmodule Traverse.Mapper do
       end
     end)
   end
+
   def map(scalar, transformer), do: wrapped_call(transformer, scalar)
 
   @doc """
     Implementation of `Traverse.mapall`
   """
-  @spec mapall( any, t_simple_mapper_fn, boolean ) :: any
+  @spec mapall(any, t_simple_mapper_fn, boolean) :: any
   def mapall(ds, transformer, post) do
     with complete_transformer = complete_fn(transformer, fn x -> x end) do
       if post do
@@ -66,6 +69,7 @@ defmodule Traverse.Mapper do
     |> Enum.map(&mapall_post(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
   end
+
   defp mapall_postelements(tuple, transformer) when is_tuple(tuple) do
     tuple
     |> Tuple.to_list()
@@ -73,17 +77,20 @@ defmodule Traverse.Mapper do
     |> Enum.reject(&Traverse.Ignore.me?/1)
     |> List.to_tuple()
   end
+
   defp mapall_postelements(ds, transformer) when is_map(ds) do
-      ds
-      |> Enum.reduce(Map.new, fn {key, value}, acc ->
-        val = mapall_post(value, transformer)
-        if Traverse.Ignore.me?(val) do
-          acc
-        else
-          Map.put(acc, key, val)
-        end
-      end)
+    ds
+    |> Enum.reduce(Map.new(), fn {key, value}, acc ->
+      val = mapall_post(value, transformer)
+
+      if Traverse.Ignore.me?(val) do
+        acc
+      else
+        Map.put(acc, key, val)
+      end
+    end)
   end
+
   defp mapall_postelements(scalar, _transformer), do: scalar
 
   #
@@ -94,11 +101,13 @@ defmodule Traverse.Mapper do
     |> transformer.()
     |> mapall_preelements(transformer)
   end
+
   defp mapall_preelements(ds, transformer) when is_list(ds) do
     ds
     |> Enum.map(&mapall_pre(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
   end
+
   defp mapall_preelements(ds, transformer) when is_tuple(ds) do
     ds
     |> Tuple.to_list()
@@ -106,17 +115,20 @@ defmodule Traverse.Mapper do
     |> Enum.reject(&Traverse.Ignore.me?/1)
     |> List.to_tuple()
   end
+
   defp mapall_preelements(ds, transformer) when is_map(ds) do
-      ds
-      |> Enum.reduce(Map.new, fn {key, value}, acc ->
-        val = mapall_pre(value, transformer)
-        if Traverse.Ignore.me?(val) do
-          acc
-        else
-          Map.put(acc, key, val)
-        end
-      end)
+    ds
+    |> Enum.reduce(Map.new(), fn {key, value}, acc ->
+      val = mapall_pre(value, transformer)
+
+      if Traverse.Ignore.me?(val) do
+        acc
+      else
+        Map.put(acc, key, val)
+      end
+    end)
   end
+
   defp mapall_preelements(scalar, _transformer), do: scalar
 
   defp complete_fn(fun, fallback) do
@@ -130,6 +142,7 @@ defmodule Traverse.Mapper do
   end
 
   defp wrapped_call(fun, arg), do: wrapped_call(fun, arg, arg)
+
   defp wrapped_call(fun, arg, default) do
     try do
       fun.(arg)
@@ -137,5 +150,4 @@ defmodule Traverse.Mapper do
       FunctionClauseError -> default
     end
   end
-
 end

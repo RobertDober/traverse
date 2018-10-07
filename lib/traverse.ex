@@ -1,5 +1,4 @@
 defmodule Traverse do
-
   use Traverse.Types
   use Traverse.Macros
 
@@ -117,20 +116,20 @@ defmodule Traverse do
     of empty lists go away too.
   """
 
-  @spec walk( any, any, t_simple_walker_fn ) :: any
-  def walk( ds, initial_acc, walker_fn ),
+  @spec walk(any, any, t_simple_walker_fn) :: any
+  def walk(ds, initial_acc, walker_fn),
     do: Traverse.Walker.walk(ds, initial_acc, walker_fn)
 
-  @spec filter( any, t_simple_filter_fn ) :: any
+  @spec filter(any, t_simple_filter_fn) :: any
   def filter(ds, filter_fn),
     do: Traverse.Filter.filter(ds, filter_fn)
 
-  @spec map( any, t_simple_mapper_fn ) :: any
-  def map( ds, mapper_fn ),
+  @spec map(any, t_simple_mapper_fn) :: any
+  def map(ds, mapper_fn),
     do: Traverse.Mapper.map(ds, mapper_fn)
 
-  @spec mapall( any, t_simple_mapper_fn, Keyword.t ) :: any
-  def mapall( ds, mapper_fn , options \\ []),
+  @spec mapall(any, t_simple_mapper_fn, Keyword.t()) :: any
+  def mapall(ds, mapper_fn, options \\ []),
     do: Traverse.Mapper.mapall(ds, mapper_fn, Keyword.get(options, :post, false))
 
   # @doc """
@@ -144,7 +143,7 @@ defmodule Traverse do
   #   iex> Tranverse.zip([1, {:a, 2}, %{b: 3, c: "hello"}],
   #   ...>   fn x when is_number(x) -> x + 1 end)
   #   [{1, 2}, {a: 2]end
-    
+
   # """
   # @spec zip( any, t_simple_mapper_fn, any ) :: any
   # def zip(ds, zipfn, default \\ nil)

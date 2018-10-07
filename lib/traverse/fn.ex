@@ -96,5 +96,4 @@ defmodule Traverse.Fn do
   def identity do
     fn any -> any end
   end
-
 end
