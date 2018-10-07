@@ -3,15 +3,15 @@ defmodule Traverse.Mixfile do
 
   def project do
     [app: :traverse,
-     version: "0.1.6",
-     elixir: "~> 1.5.1",
+     version: "0.1.7",
+     elixir: "~> 1.7",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      elixirc_paths: elixirc_paths(Mix.env),
      description:   description(),
      package:       package(),
      test_coverage: [tool: ExCoveralls],
-     preferred_cli_env: ["coveralls": :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test],
+     preferred_cli_env: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test],
      deps: deps()]
   end
 
@@ -43,9 +43,9 @@ defmodule Traverse.Mixfile do
 
   defp deps do
     [
-      {:excoveralls, "~> 0.7.2", only: :test},
+      {:excoveralls, "~> 0.10", only: :test},
       { :dialyxir, "~> 0.5", only: [ :dev, :test ] },
-      { :read_doc, "~> 0.1",  only: :dev, path: "/home/robert/log/elixir/read_doc" },
+      # { :read_doc, "~> 0.1",  only: :dev, path: "/home/robert/log/elixir/read_doc" },
     ]
   end
 
