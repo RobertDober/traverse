@@ -3,7 +3,7 @@ defmodule Traverse.Mixfile do
 
   def project do
     [app: :traverse,
-     version: "0.1.7",
+     version: "1.0.0-pre",
      elixir: "~> 1.7",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
