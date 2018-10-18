@@ -8,6 +8,8 @@ defmodule Traverse do
     avoid recursive decent from this node on.
     """
     defstruct acc: "boxed accumulator"
+    def me?(%__MODULE__{}), do: true
+    def me?(_), do: false
   end
 
   defmodule Ignore do
@@ -27,25 +29,128 @@ defmodule Traverse do
   end
 
   @moduledoc """
-  ## Traverse is a toolset to walk arbitrary Elixir Datastructures.
+  # Traverse is a toolset to walk arbitrary Elixir Datastructures.
+
+  ## Walking
 
   `walk` visits all substructures down to atomic elements.
 
-      iex>    ds = [:a, {:b, 1, 2}, [:c, 3, 4, 5]]
-      ...>    collector =  fn ele, acc when is_atom(ele) or is_number(ele) -> [ele|acc]
-      ...>                    _,   acc                    -> acc       end
-      ...>    Traverse.walk(ds, [], collector)
+      iex(0)> ds = [:a, {:b, 1, 2}, [:c, 3, 4, 5]]
+      ...(0)> collector =  fn ele, acc when is_atom(ele) or is_number(ele) -> [ele|acc]
+      ...(0)>                 _,   acc                    -> acc       end
+      ...(0)> Traverse.walk(ds, [], collector)
       [5, 4, 3, :c, 2, 1, :b, :a]
 
-   One can return the accumulator boxed in a `%Cut{}` struct to avoid traversal of the
-   subtree.
+   But substructures are of course visited too:
 
-      iex>   ds = [add: [1, 2], ignore: [3, 4]]
-      ...>   collector = fn {:ignore, _}, acc        -> %Traverse.Cut{acc: acc}
-      ...>                  n, acc when is_number(n) -> [n|acc]
-      ...>                  _, acc                   -> acc end
-      ...>   Traverse.walk(ds, [], collector)
-      [2, 1]
+      iex(1)> ds = [:a, {:b, 1, 2}, [:c, 3, 4, 5]]
+      ...(1)> collector = fn ele, acc -> [ele|acc] end
+      ...(1)> Traverse.walk(ds, [], collector) |> Enum.reverse
+      [[:a, {:b, 1, 2}, [:c, 3, 4, 5]], :a, {:b, 1, 2}, :b, 1, 2, [:c, 3, 4, 5], :c, 3, 4, 5] 
+
+   This, a little bit more complex example, shows that the default visiting strategy is depth first
+   and prewalk, in other words, the algorithm is descending the leftmost path, calling the visiting
+   function _before_ descending.
+
+   We can however instruct it to use a postwalk strategy as follows
+
+      iex(2)> ds = [:a, [:c, 3]]
+      ...(2)> collector = fn ele, acc -> [ele|acc] end
+      ...(2)> Traverse.walk(ds, [], collector, postwalk: true)
+      [[:a, [:c, 3]], [:c, 3], 3, :c, :a]
+       
+
+   ### Cutting subtrees off
+   
+   Let us say that we do not want to traverse certain, subtrees, as in the following example
+   in which `%TraverseCut{}` is used to cut subtrees if which the key is `:ignore`:
+
+      iex(3)> ds = %{a: %{ignore: [1, 3, 4]}, b: 10, c: %{e: 20, d: [f: 30, ignore: 1000]}}
+      ...(3)> collector = fn 
+      ...(3)>   ele, acc when is_number ele -> acc + ele
+      ...(3)>   {:ignore, _}, acc -> %Traverse.Cut{acc: acc}
+      ...(3)>   _  , acc -> acc end
+      ...(3)> Traverse.walk(ds, 0, collector)
+      60
+
+   In postwalk scenarii this does not make any sense of course
+
+      iex(4)> ds = %{a: [1, 2], ignore: [3, 4]}
+      ...(4)> collector = fn 
+      ...(4)>   ele, acc when is_number ele -> acc + ele
+      ...(4)>   {:ignore, _}, acc -> %Traverse.Cut{acc: acc}
+      ...(4)>   _  , acc -> acc end
+      ...(4)> Traverse.walk(ds, 0, collector, postwalk: true)
+      %Traverse.Cut{acc: 10}
+
+   Therefore postwalk does not even unbox the Cut struct which might lead to errors we used
+   this example only to show that when the cut is applied the accumulator has already added
+   the values from the subtrees.
+
+
+   ### Partial functions
+   
+
+   The astuce reader might have noticed that most of our collector functions above
+   had a default clause like that:
+
+        _, acc -> acc end
+   
+
+   It is tempting to complete partial collector functions this way automatically.
+   However this has two major downsides:
+    - stack traces are harder to read
+    - runtime augments
+
+   That said, especially in iex sessions it might be useful to be able doing this:
+
+      iex(5)> ds = %{a: 1, b: 2}
+      ...(5)> Traverse.walk!(ds, 0, fn ele, acc when is_number(ele) -> ele + acc end)
+      3
+
+   Just to show the difference with the unbanged version of `walk`:
+
+      iex(6)> ds = %{a: 1, b: 2}
+      ...(6)> try do
+      ...(6)>   Traverse.walk(ds, 0, fn ele, acc when is_number(ele) -> ele + acc end)
+      ...(6)> rescue
+      ...(6)>   FunctionClauseError -> :rescued 
+      ...(6)> end
+      :rescued
+
+
+   The bang version can also be used with `postwalk: true` of course.
+
+      iex(7)> ds = %{a: 1, b: 2}
+      ...(7)> Traverse.walk!(ds, 0, fn ele, acc when is_number(ele) -> ele + acc end, postwalk: true)
+      3
+
+   ## Mapping
+
+   While walking implements the most general way to traverse common data structures it does not preserve
+   the structure of the walked data structure.
+
+   If the whole or large parts of the structures are to be preserved very often the usage of `map` can
+   make for much simpler _visitors_, which we call now _mappers_.
+
+   Let us look at a simple example:
+      
+      iex(8)> ds = %{name: "José", projects: ["Rails", "Elixir"], score: 100}
+      ...(8)> Traverse.map(ds, fn ele when is_binary(ele) -> ele |> String.upcase
+      ...(8)>                     ele -> ele end)
+      %{name: "JOSÉ", projects: ["RAILS", "ELIXIR"], score: 100}
+
+   ### Partial Functions
+
+   With the same restrictions that apply to walking the bang version might be useful.
+
+   In the _mapping_ case, it augments partial functions with the identity function of course.
+
+      iex(9)> ds = %{name: "José", projects: ["Rails", "Elixir"], score: 100}
+      ...(9)> Traverse.map!(ds, fn ele when is_binary(ele) -> ele |> String.upcase end)
+      %{name: "JOSÉ", projects: ["RAILS", "ELIXIR"], score: 100}
+
+
 
     filter allows to filter arbitrary substructures according to a filter function.
 
@@ -116,9 +221,18 @@ defmodule Traverse do
     of empty lists go away too.
   """
 
-  @spec walk(any, any, t_simple_walker_fn) :: any
-  def walk(ds, initial_acc, walker_fn),
+  @spec walk(any, any, t_simple_walker_fn, Keyword.t) :: any
+  def walk(ds, initial_acc, walker_fn, options \\ [])
+  def walk(ds, initial_acc, walker_fn, [postwalk: true]),
+    do: Traverse.Walker.postwalk(ds, initial_acc, walker_fn)
+  def walk(ds, initial_acc, walker_fn, _),
     do: Traverse.Walker.walk(ds, initial_acc, walker_fn)
+
+  def walk!(ds, initial_acc, walker_fn, options \\ [])
+  def walk!(ds, initial_acc, walker_fn, [postwalk: true]),
+    do: Traverse.Walker.postwalk!(ds, initial_acc, walker_fn)
+  def walk!(ds, initial_acc, walker_fn, _),
+    do: Traverse.Walker.walk!(ds, initial_acc, walker_fn)
 
   @spec filter(any, t_simple_filter_fn) :: any
   def filter(ds, filter_fn),
@@ -127,6 +241,10 @@ defmodule Traverse do
   @spec map(any, t_simple_mapper_fn) :: any
   def map(ds, mapper_fn),
     do: Traverse.Mapper.map(ds, mapper_fn)
+
+  @spec map!(any, t_simple_mapper_fn) :: any
+  def map!(ds, mapper_fn),
+    do: Traverse.Mapper.map!(ds, mapper_fn)
 
   @spec mapall(any, t_simple_mapper_fn, Keyword.t()) :: any
   def mapall(ds, mapper_fn, options \\ []),
@@ -148,3 +266,5 @@ defmodule Traverse do
   # @spec zip( any, t_simple_mapper_fn, any ) :: any
   # def zip(ds, zipfn, default \\ nil)
 end
+
+# SPDX-License-Identifier: Apache-2.0

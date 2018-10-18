@@ -37,7 +37,11 @@ defmodule Traverse.Mapper do
     end)
   end
 
-  def map(scalar, transformer), do: wrapped_call(transformer, scalar)
+  def map(scalar, transformer), do: transformer.(scalar)
+
+
+  @spec map(any, t_simple_mapper_fn) :: any 
+  def map!(ds, transformer), do: map(ds, wrapped(transformer))
 
   @doc """
     Implementation of `Traverse.mapall`
@@ -141,13 +145,13 @@ defmodule Traverse.Mapper do
     end
   end
 
-  defp wrapped_call(fun, arg), do: wrapped_call(fun, arg, arg)
-
-  defp wrapped_call(fun, arg, default) do
-    try do
-      fun.(arg)
-    rescue
-      FunctionClauseError -> default
+  defp wrapped(fun) do
+    fn arg ->
+      try do
+        fun.(arg)
+      rescue
+        FunctionClauseError -> arg
+      end
     end
   end
 end
