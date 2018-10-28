@@ -150,7 +150,7 @@ defmodule Traverse.Mapper do
       try do
         fun.(arg)
       rescue
-        FunctionClauseError -> arg
+        _ -> arg
       end
     end
   end
