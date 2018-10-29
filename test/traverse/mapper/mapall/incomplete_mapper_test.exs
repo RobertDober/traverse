@@ -10,7 +10,7 @@ defmodule Traverse.Mapper.Mapall.IncompleteMapperTest do
 
   describe "save inc is completed for inner nodes" do
     test "post" do
-      assert post(@int_nodes, &save_inc/1) == @posincremented
+      assert post(@int_nodes, &save_inc/1) == @postincremented
     end
     test "pre" do
       assert pre(@int_nodes, &save_inc/1) == @preincremented
