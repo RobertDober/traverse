@@ -61,7 +61,7 @@ defmodule Traverse do
        
 
   ### Cutting substructures off
-  
+
   Let us say that we do not want to traverse certain, subtrees, as in the following example
   in which `%TraverseCut{}` is used to cut subtrees if which the key is `:ignore`:
 
@@ -89,13 +89,13 @@ defmodule Traverse do
 
 
   ### Partial functions
-  
+
 
   The astuce reader might have noticed that most of our collector functions above
   had a default clause like that:
 
        _, acc -> acc end
-  
+
 
   It is tempting to complete partial collector functions this way automatically.
   However this has major downsides:
@@ -134,12 +134,12 @@ defmodule Traverse do
   the structure of the walked data structure.
 
   Mapping will descend the data structure and copy it, but apply the mapper function **only** to leaves.
-  
+
   Therefore it is sufficient to define the __mapper__ function for the type of leave values only.
 
   However, while map keys are not leaves, keyword lists are just list of tuples and as such the __keys__ are
   considered leaves too.
-  
+
       iex(8)> ds = [ a: 1, b: %{ c: [1, 2], d: [e: 100, f: 200] } ]
       ...(8)> mapper = fn x when is_number(x) -> x + 1
       ...(8)>             x                   -> x      end
@@ -153,7 +153,7 @@ defmodule Traverse do
   of the mapper function with the identity function, and the banged version, `map!` is
   just doing that
 
-  
+
       iex(9)> ds = [ a: 1, b: %{ c: [1, 2], d: [e: 100, f: 200] } ]
       ...(9)> Traverse.map!(ds, &(&1+1))
       [ a: 2, b: %{ c: [2, 3], d: [e: 101, f: 201] } ]
@@ -270,16 +270,20 @@ defmodule Traverse do
    of empty lists go away too.
   """
 
-  @spec walk(any, any, t_simple_walker_fn, Keyword.t) :: any
+  @spec walk(any, any, t_simple_walker_fn, Keyword.t()) :: any
   def walk(ds, initial_acc, walker_fn, options \\ [])
-  def walk(ds, initial_acc, walker_fn, [postwalk: true]),
+
+  def walk(ds, initial_acc, walker_fn, postwalk: true),
     do: Traverse.Walker.postwalk(ds, initial_acc, walker_fn)
+
   def walk(ds, initial_acc, walker_fn, _),
     do: Traverse.Walker.walk(ds, initial_acc, walker_fn)
 
   def walk!(ds, initial_acc, walker_fn, options \\ [])
-  def walk!(ds, initial_acc, walker_fn, [postwalk: true]),
+
+  def walk!(ds, initial_acc, walker_fn, postwalk: true),
     do: Traverse.Walker.postwalk!(ds, initial_acc, walker_fn)
+
   def walk!(ds, initial_acc, walker_fn, _),
     do: Traverse.Walker.walk!(ds, initial_acc, walker_fn)
 
