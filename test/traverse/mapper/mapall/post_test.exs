@@ -3,7 +3,7 @@ defmodule Traverse.Mapper.Mapall.PostTest do
 
   describe "Traverse.mapall(post: false) empty cases" do
     test "list with complete fn" do
-      assert mapall([], const(1)) == []
+      assert mapall([], const(1)) == 1
     end
 
     test "list with partial fn" do
@@ -11,11 +11,11 @@ defmodule Traverse.Mapper.Mapall.PostTest do
     end
 
     test "list with error fn" do
-      assert mapall([], inc()) == []
+      assert_raise(ArithmeticError, fn -> mapall([], inc()) end)
     end
 
     test "tuple with complete fn" do
-      assert mapall({}, const(2)) == {}
+      assert mapall({}, const(2)) == 2
     end
 
     test "tuple with partial fn" do

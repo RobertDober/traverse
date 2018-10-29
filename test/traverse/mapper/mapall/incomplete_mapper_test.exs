@@ -4,15 +4,16 @@ defmodule Traverse.Mapper.Mapall.IncompleteMapperTest do
   import Traverse, only: [mapall: 3]
 
   @int_nodes [{0, 1}, %{b: 2, c: [3, 4]}]
-  @incremented [{1, 2}, %{b: 3, c: [4, 5]}]
+  @preincremented [{1, 2}, %{b: 3, c: [4, 5]}]
+  @postincremented [[ 1, 2 ], %{b: 3, c: [4, 5]}]
   @mixed_nodes [{:a, 1, :b}, %{b: 2, c: ["hello", 3, 4]}]
 
   describe "save inc is completed for inner nodes" do
     test "post" do
-      assert post(@int_nodes, &save_inc/1) == @incremented
+      assert post(@int_nodes, &save_inc/1) == @posincremented
     end
     test "pre" do
-      assert pre(@int_nodes, &save_inc/1) == @incremented
+      assert pre(@int_nodes, &save_inc/1) == @preincremented
     end
   end
 
