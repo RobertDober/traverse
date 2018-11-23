@@ -131,7 +131,7 @@ defmodule Traverse do
   ## Mapping
 
   While walking implements the most general way to traverse common data structures it does not preserve
-  the structure of the walked data structure.
+  the structure of the walked data structure by itself.
 
   Mapping will descend the data structure and copy it, but apply the mapper function **only** to leaves.
 
@@ -142,9 +142,13 @@ defmodule Traverse do
 
       iex(8)> ds = [ a: 1, b: %{ c: [1, 2], d: [e: 100, f: 200] } ]
       ...(8)> mapper = fn x when is_number(x) -> x + 1
+      ...(8)>             x when is_atom(x)   -> to_string(x)
       ...(8)>             x                   -> x      end
       ...(8)> Traverse.map(ds, mapper)
-      [ a: 2, b: %{ c: [2, 3], d: [e: 101, f: 201] } ]
+      [{"a", 2}, {"b", %{c: [2, 3], d: [{"e", 101}, {"f", 201}]}}]
+
+   One can avoid this with the `ignore_kw_keys: true` flag.
+      <!--      [ a: 2, b: %{ c: [2, 3], d: [e: 101, f: 201] } ] -->
 
 
   ### Partial functions
@@ -155,7 +159,7 @@ defmodule Traverse do
 
 
       iex(9)> ds = [ a: 1, b: %{ c: [1, 2], d: [e: 100, f: 200] } ]
-      ...(9)> Traverse.map!(ds, &(&1+1))
+      ...(9)> Traverse.map!(ds, fn x when is_number(x) -> x + 1 end)
       [ a: 2, b: %{ c: [2, 3], d: [e: 101, f: 201] } ]
 
 
@@ -256,14 +260,16 @@ defmodule Traverse do
    Here is a simple example that eliminates empty sublists
 
        iex> [1, [[]], 2, [3, []]]
-       ...> |> Traverse.mapall(fn [] -> Traverse.Ignore end)
+       ...> |> Traverse.mapall(fn [] -> Traverse.Ignore 
+       ...>                        x  -> x end)
        [1, [], 2, [3]]
 
    This example shows that `mapall` applies a prewalk strategy by default, we can
    change this by providing the option `post: true`.
 
        iex> [1, [[]], 2, [3, []]]
-       ...> |> Traverse.mapall(fn [] -> Traverse.Ignore end, post: true)
+       ...> |> Traverse.mapall(fn [] -> Traverse.Ignore 
+       ...>                        x  -> x end, post: true)
        [1, 2, [3]]
    
    Now, by applying the transformation after having transformed the substructure, empty lists

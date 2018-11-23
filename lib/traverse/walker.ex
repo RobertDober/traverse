@@ -10,18 +10,20 @@ defmodule Traverse.Walker do
   def postwalk(coll, acc, collector)
 
   def postwalk(ele, acc, collector) when is_tuple(ele) do
-    acc = 
+    acc =
       ele
       |> Tuple.to_list()
       |> Enum.reduce(acc, &postwalk(&1, &2, collector))
-     collector.(ele, acc)
+
+    collector.(ele, acc)
   end
 
   def postwalk(ele, acc, collector) when is_list(ele) or is_map(ele) do
     acc =
       ele
       |> Enum.reduce(acc, &postwalk(&1, &2, collector))
-     collector.(ele, acc)
+
+    collector.(ele, acc)
   end
 
   def postwalk(ele, acc, collector) do
@@ -35,9 +37,8 @@ defmodule Traverse.Walker do
      ...(1)>                        fn (n, acc) when is_number(n) -> acc + n end)
      15
   """
-  @spec postwalk!(any, any, t_simple_walker_fn) :: any 
-  def postwalk!(ele, acc, collector), do:
-    postwalk(ele, acc, wrapped(collector))
+  @spec postwalk!(any, any, t_simple_walker_fn) :: any
+  def postwalk!(ele, acc, collector), do: postwalk(ele, acc, wrapped(collector))
 
   @doc """
   `walk` implements a top down recursive pre traversal in an arbitrary Elixir datastructure.
@@ -93,11 +94,10 @@ defmodule Traverse.Walker do
 
   """
   @spec walk!(any, any, t_simple_walker_fn) :: any
-  def walk!(coll, acc, collector), do:
-    walk(coll, acc, wrapped(collector))
+  def walk!(coll, acc, collector), do: walk(coll, acc, wrapped(collector))
 
   defp wrapped(fun) do
-    fn ele, acc -> 
+    fn ele, acc ->
       try do
         fun.(ele, acc)
       rescue

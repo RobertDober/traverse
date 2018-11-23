@@ -3,7 +3,9 @@ defmodule Traverse.WalkerTest do
 
   import Traverse.Walker
 
-  describe "postwalk" do 
+  doctest Traverse.Walker
+
+  describe "postwalk" do
     test "empty" do
       assert postwalk([], [], &collector/2) == [[]]
     end
@@ -13,7 +15,6 @@ defmodule Traverse.WalkerTest do
       assert postwalk(@desc_bef_call, [], &collector/2) == [[:a, [:b, 1]], [:b, 1], 1, :b, :a]
     end
   end
-  
 
-  defp collector(ele, acc), do: [ele|acc]
+  defp collector(ele, acc), do: [ele | acc]
 end
