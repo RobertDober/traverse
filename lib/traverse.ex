@@ -48,7 +48,7 @@ defmodule Traverse do
       ...(1)> Traverse.walk(ds, [], collector) |> Enum.reverse
       [[:a, {:b, 1, 2}, [:c, 3, 4, 5]], :a, {:b, 1, 2}, :b, 1, 2, [:c, 3, 4, 5], :c, 3, 4, 5] 
 
-  This, a little bit more complex example, shows that the default visiting strategy is depth first
+  This example shows that the default visiting strategy is depth first
   and prewalk, in other words, the algorithm is descending the leftmost path, calling the visiting
   function _before_ descending.
 
@@ -58,8 +58,10 @@ defmodule Traverse do
       ...(2)> collector = fn ele, acc -> [ele|acc] end
       ...(2)> Traverse.walk(ds, [], collector, postwalk: true)
       [[:a, [:c, 3]], [:c, 3], 3, :c, :a]
-       
 
+       
+  For the time being the depth first strategy cannot be changed.
+  
   ### Cutting substructures off
 
   Let us say that we do not want to traverse certain, subtrees, as in the following example
@@ -98,6 +100,7 @@ defmodule Traverse do
 
 
   It is tempting to complete partial collector functions this way automatically.
+
   However this has major downsides:
    - application errors are masked by the rescue clause
    - stack traces are harder to read
@@ -146,9 +149,6 @@ defmodule Traverse do
       ...(8)>             x                   -> x      end
       ...(8)> Traverse.map(ds, mapper)
       [{"a", 2}, {"b", %{c: [2, 3], d: [{"e", 101}, {"f", 201}]}}]
-
-   One can avoid this with the `ignore_kw_keys: true` flag.
-      <!--      [ a: 2, b: %{ c: [2, 3], d: [e: 101, f: 201] } ] -->
 
 
   ### Partial functions
@@ -204,76 +204,35 @@ defmodule Traverse do
       :rescued
 
 
+  ## Filtering
 
-   filter allows to filter arbitrary substructures according to a filter function.
 
-   The filter function does not need to be completely defined, undefined values
-   are mapped to false. In other words we need to define the filter functions only
-   for structures and values we want to keep.
+  Filtering could be implemented by `mapall` and a traversal function that returns either
+  an `Ignore` value or the input paramater. Let us demonstrate with the following example
 
-       iex> number_arrays = fn x when is_number(x) -> true
-       ...>                    l when is_list(l)   -> true end
-       ...> Traverse.filter([:a, {1, 2}, 3, [4, :b]], number_arrays)
+      iex(13)> ds = [ %{a: 1}, [2, 3] ]
+      ...(13)> odd_list_elements = fn x when is_number(x) -> if rem(x, 2) == 1, do: x, else: Traverse.Ignore  
+      ...(13)>                        x when is_list(x)   -> x
+      ...(13)>                        _                   -> Traverse.Ignore end
+      ...(13)> Traverse.mapall(ds, odd_list_elements)
+      [ [3] ]
+
+  `Traverse` filter removes lots of the boilerplate
+
+      iex(14)> ds = [ %{a: 1}, [2, 3] ]
+      ...(14)> odd_list_elements = fn x when is_number(x) -> rem(x,2) == 1
+      ...(14)>                        x                   -> is_list(x) end
+      ...(14)> Traverse.filter(ds, odd_list_elements)
+      [ [3] ]
+
+
+   As with `map` and `walk` there is the bang version, accepting partial filter functions
+
+
+       iex(15)> number_arrays = fn x when is_number(x) -> true
+       ...(15)>                    l when is_list(l)   -> true end
+       ...(15)> Traverse.filter!([:a, {1, 2}, 3, [4, :b]], number_arrays)
        [3, [4]]
-
-   The same result can be achieved with `mapall` and `Traverse.Ignore` if that suits
-   your style better:
-
-       iex> not_number_arrays = fn x when is_number(x) or is_list(x) -> x
-       ...>                    _   -> Traverse.Ignore end
-       ...> Traverse.mapall([:a, {1, 2}, 3, [4, :b]], not_number_arrays)
-       [3, [4]]
-
-   map preserves structure, that is lists remain lists, tuples remain tuples and
-   maps remain maps with the same keys, unless the transformation returns `Traverse.Ignore` (c.f. `map1` if you want to transform key
-   value pairs in maps)
-
-   In order to avoid putting unnecessary burden on the transformer function it can only be partially defined, and it will be completed
-   with the identity function for undefined parameters. Here is an example.
-
-       # iex> Traverse.map([ 1,  2], fn x when is_number(x) -> x + 1 end)
-       # [:a, 2,  3]
-
-   The transformer function can also return the special value `Traverse.Ignore`, which will remove the value from the result, and in
-   case of a map it will remove the key, value pair.
-
-       iex> require Integer
-       ...> no_odds = fn x when Integer.is_even(x) -> x * 2
-       ...>              _                 -> Traverse.Ignore end
-       ...> Traverse.map([1, %{a: 1, b: 2}, {3, 4}], no_odds)
-       [%{b: 4}, {8}]
-
-   The more general way to achieve this is to use `filter_map`, which however is less efficent as the filter function is also called
-   on inner nodes.
-
-   `mapall` like `map` perserves the structure of the data structure passed in.
-
-   However it also calls the `transformer` function for inner nodes, which allows
-   us to perform mappings on substructures.
-
-   Again the `transformer` function can be partially defined and is completed by
-   the identity function.
-
-   And, also again, the special return value `Traverse.Ignore` can be used to ignore
-   values or substructures.
-
-   Here is a simple example that eliminates empty sublists
-
-       iex> [1, [[]], 2, [3, []]]
-       ...> |> Traverse.mapall(fn [] -> Traverse.Ignore 
-       ...>                        x  -> x end)
-       [1, [], 2, [3]]
-
-   This example shows that `mapall` applies a prewalk strategy by default, we can
-   change this by providing the option `post: true`.
-
-       iex> [1, [[]], 2, [3, []]]
-       ...> |> Traverse.mapall(fn [] -> Traverse.Ignore 
-       ...>                        x  -> x end, post: true)
-       [1, 2, [3]]
-   
-   Now, by applying the transformation after having transformed the substructure, empty lists
-   of empty lists go away too.
   """
 
   @spec walk(any, any, t_simple_walker_fn, Keyword.t()) :: any
@@ -296,6 +255,10 @@ defmodule Traverse do
   @spec filter(any, t_simple_filter_fn) :: any
   def filter(ds, filter_fn),
     do: Traverse.Filter.filter(ds, filter_fn)
+
+  @spec filter!(any, t_simple_filter_fn) :: any
+  def filter!(ds, filter_fn),
+    do: Traverse.Filter.filter!(ds, filter_fn)
 
   @spec map(any, t_simple_mapper_fn) :: any
   def map(ds, mapper_fn),

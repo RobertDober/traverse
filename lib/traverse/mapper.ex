@@ -70,9 +70,10 @@ defmodule Traverse.Mapper do
 
   defp mapall_post(tuple, transformer) when is_tuple(tuple) do
     tuple
-    |> Tuple.to_list()
+    |> Tuple.to_list
     |> Enum.map(&mapall_post(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
+    |> List.to_tuple
     |> wrapped(transformer).()
   end
 
