@@ -1,6 +1,5 @@
 defmodule Traverse.Mapper do
   use Traverse.Types
-  import Traverse.Guards, only: [is_scalar: 1]
 
   @moduledoc """
     Implements structure perserving transformations on arbitrary data structures
@@ -13,7 +12,8 @@ defmodule Traverse.Mapper do
   def map(ds, transformer)
 
   def map(ds, transformer) when is_list(ds) do
-    Enum.map(ds, &map(&1, transformer))
+    ds
+    |> Enum.map(&map(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
   end
 
@@ -23,6 +23,13 @@ defmodule Traverse.Mapper do
     |> Enum.map(&map(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
     |> List.to_tuple()
+  end
+
+  def map(%{__struct__: type} = ds, transformer) do
+    ds
+    |> Map.delete(:__struct__)
+    |> map(transformer)
+    |> Map.put(:__struct__, type)
   end
 
   def map(ds, transformer) when is_map(ds) do
@@ -77,6 +84,12 @@ defmodule Traverse.Mapper do
     |> wrapped(transformer).()
   end
 
+  defp mapall_post(%{__struct__: type}=ds, transformer) do
+    ds
+    |> Map.delete(:__struct__)
+    |> mapall_post(transformer)
+  end
+
   defp mapall_post(ds, transformer) when is_map(ds) do
     ds
     |> Enum.reduce(Map.new(), fn {key, value}, acc ->
@@ -100,6 +113,13 @@ defmodule Traverse.Mapper do
     ds
     |> Enum.map(&mapall_pre(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
+  end
+
+  defp mapall_after_transform(%{__struct__: type}=ds, transformer) do
+    ds
+    |> Map.delete(:__struct__)
+    |> mapall_after_transform(transformer)
+    |> Map.put(:__struct__, type)
   end
 
   defp mapall_after_transform(ds, transformer) when is_map(ds) do

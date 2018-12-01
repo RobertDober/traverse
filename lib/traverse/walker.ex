@@ -2,6 +2,8 @@ defmodule Traverse.Walker do
   use Traverse.Types
   alias Traverse.Cut
 
+  import Traverse.Enum, only: [reduce: 3]
+
   @moduledoc """
   Implements traversal functions, structure is not maintained unless the traversal functions do so. 
   """
@@ -21,7 +23,7 @@ defmodule Traverse.Walker do
   def postwalk(ele, acc, collector) when is_list(ele) or is_map(ele) do
     acc =
       ele
-      |> Enum.reduce(acc, &postwalk(&1, &2, collector))
+      |> reduce(acc, &postwalk(&1, &2, collector))
 
     collector.(ele, acc)
   end
@@ -54,6 +56,10 @@ defmodule Traverse.Walker do
   @spec walk(any, any, t_simple_walker_fn) :: any
   def walk(coll, acc, collector)
 
+#  def walk(%{__struct__: type}=struct, acc, collector) do
+#    walk(Map.delete(struct, :__struct__), acc, collector)
+#  end
+
   def walk(ele, acc, collector) when is_map(ele) or is_list(ele) do
     case collector.(ele, acc) do
       %Cut{acc: acc} ->
@@ -61,7 +67,7 @@ defmodule Traverse.Walker do
 
       acc ->
         ele
-        |> Enum.reduce(acc, &walk(&1, &2, collector))
+        |> reduce(acc, &walk(&1, &2, collector))
     end
   end
 
