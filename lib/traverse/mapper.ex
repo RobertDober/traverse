@@ -1,6 +1,8 @@
 defmodule Traverse.Mapper do
   use Traverse.Types
 
+  import Traverse.Enum, only: [reduce: 3]
+
   @moduledoc """
     Implements structure perserving transformations on arbitrary data structures
   """
@@ -34,7 +36,7 @@ defmodule Traverse.Mapper do
 
   def map(ds, transformer) when is_map(ds) do
     ds
-    |> Enum.reduce(Map.new(), fn {key, value}, acc ->
+    |> reduce(Map.new(), fn {key, value}, acc ->
       val = map(value, transformer)
 
       if Traverse.Ignore.me?(val) do
