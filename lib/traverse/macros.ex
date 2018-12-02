@@ -17,8 +17,8 @@ defmodule Traverse.Macros do
 
   """
   defmacro is_scalar(x) do
-    quote do
-      is_atom(unquote(x)) or is_number(unquote(x)) or is_binary(unquote(x))
+    quote bind_quoted: [x: x] do
+      is_atom(x) or is_number(x) or is_binary(x)
     end
   end
 end

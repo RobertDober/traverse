@@ -12,7 +12,8 @@ defmodule Traverse.Mapper do
   def map(ds, transformer)
 
   def map(ds, transformer) when is_list(ds) do
-    Enum.map(ds, &map(&1, transformer))
+    ds
+    |> Enum.map(&map(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
   end
 
@@ -22,6 +23,13 @@ defmodule Traverse.Mapper do
     |> Enum.map(&map(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
     |> List.to_tuple()
+  end
+
+  def map(%{__struct__: type} = ds, transformer) do
+    ds
+    |> Map.delete(:__struct__)
+    |> map(transformer)
+    |> Map.put(:__struct__, type)
   end
 
   def map(ds, transformer) when is_map(ds) do
@@ -37,86 +45,84 @@ defmodule Traverse.Mapper do
     end)
   end
 
-  def map(scalar, transformer), do: wrapped_call(transformer, scalar)
+  def map(scalar, transformer), do: transformer.(scalar)
+
+  @spec map(any, t_simple_mapper_fn) :: any
+  def map!(ds, transformer), do: map(ds, wrapped(transformer))
 
   @doc """
     Implementation of `Traverse.mapall`
   """
   @spec mapall(any, t_simple_mapper_fn, boolean) :: any
   def mapall(ds, transformer, post) do
-    with complete_transformer = complete_fn(transformer, fn x -> x end) do
-      if post do
-        ds
-        |> mapall_postelements(complete_transformer)
-      else
-        ds
-        |> mapall_preelements(complete_transformer)
-      end
+    if post do
+      ds
+      |> mapall_post(transformer)
+    else
+      ds
+      |> mapall_pre(transformer)
     end
   end
 
   #
   # POST
   #
-  defp mapall_post(ds, transformer) do
-    ds
-    |> mapall_postelements(transformer)
-    |> transformer.()
-  end
 
-  defp mapall_postelements(list, transformer) when is_list(list) do
+  defp mapall_post(list, transformer) when is_list(list) do
     list
     |> Enum.map(&mapall_post(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
+    |> wrapped(transformer).()
   end
 
-  defp mapall_postelements(tuple, transformer) when is_tuple(tuple) do
+  defp mapall_post(tuple, transformer) when is_tuple(tuple) do
     tuple
-    |> Tuple.to_list()
+    |> Tuple.to_list
     |> Enum.map(&mapall_post(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
-    |> List.to_tuple()
+    |> List.to_tuple
+    |> wrapped(transformer).()
   end
 
-  defp mapall_postelements(ds, transformer) when is_map(ds) do
+  defp mapall_post(%{__struct__: type}=ds, transformer) do
+    ds
+    |> Map.delete(:__struct__)
+    |> mapall_post(transformer)
+  end
+
+  defp mapall_post(ds, transformer) when is_map(ds) do
     ds
     |> Enum.reduce(Map.new(), fn {key, value}, acc ->
       val = mapall_post(value, transformer)
 
       if Traverse.Ignore.me?(val) do
-        acc
+        wrapped(transformer).(acc)
       else
-        Map.put(acc, key, val)
+        wrapped(transformer).(Map.put(acc, key, val))
       end
     end)
   end
 
-  defp mapall_postelements(scalar, _transformer), do: scalar
+  defp mapall_post(scalar, transformer), do: transformer.(scalar)
 
   #
   # PRE
   #
-  defp mapall_pre(ds, transformer) do
-    ds
-    |> transformer.()
-    |> mapall_preelements(transformer)
-  end
 
-  defp mapall_preelements(ds, transformer) when is_list(ds) do
+  defp mapall_after_transform(ds, transformer) when is_list(ds) do
     ds
     |> Enum.map(&mapall_pre(&1, transformer))
     |> Enum.reject(&Traverse.Ignore.me?/1)
   end
 
-  defp mapall_preelements(ds, transformer) when is_tuple(ds) do
+  defp mapall_after_transform(%{__struct__: type}=ds, transformer) do
     ds
-    |> Tuple.to_list()
-    |> Enum.map(&mapall_pre(&1, transformer))
-    |> Enum.reject(&Traverse.Ignore.me?/1)
-    |> List.to_tuple()
+    |> Map.delete(:__struct__)
+    |> mapall_after_transform(transformer)
+    |> Map.put(:__struct__, type)
   end
 
-  defp mapall_preelements(ds, transformer) when is_map(ds) do
+  defp mapall_after_transform(ds, transformer) when is_map(ds) do
     ds
     |> Enum.reduce(Map.new(), fn {key, value}, acc ->
       val = mapall_pre(value, transformer)
@@ -129,25 +135,34 @@ defmodule Traverse.Mapper do
     end)
   end
 
-  defp mapall_preelements(scalar, _transformer), do: scalar
-
-  defp complete_fn(fun, fallback) do
-    fn x ->
-      try do
-        fun.(x)
-      rescue
-        FunctionClauseError -> fallback.(x)
-      end
-    end
+  defp mapall_after_transform(ds, transformer) when is_tuple(ds) do
+    ds
+    |> Tuple.to_list()
+    |> Enum.map(&mapall_pre(&1, transformer))
+    |> Enum.reject(&Traverse.Ignore.me?/1)
+    |> List.to_tuple()
   end
 
-  defp wrapped_call(fun, arg), do: wrapped_call(fun, arg, arg)
+  defp mapall_after_transform(ds, transformer) do
+    transformer.(ds)
+  end
 
-  defp wrapped_call(fun, arg, default) do
-    try do
-      fun.(arg)
-    rescue
-      FunctionClauseError -> default
+  defp mapall_pre(ds, transformer)
+       when is_list(ds) or is_map(ds) or is_tuple(ds) do
+    ds
+    |> wrapped(transformer).()
+    |> mapall_after_transform(transformer)
+  end
+
+  defp mapall_pre(ds, transformer), do: transformer.(ds)
+
+  defp wrapped(fun) do
+    fn arg ->
+      try do
+        fun.(arg)
+      rescue
+        FunctionClauseError -> arg
+      end
     end
   end
 end
