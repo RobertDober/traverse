@@ -18,6 +18,7 @@ otp_release:
   - 20.1
   - 20.2
   - 21.0.3
+  - 21.2
 
 env:
   - MIX_ENV=test
