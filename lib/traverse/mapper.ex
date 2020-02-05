@@ -86,7 +86,7 @@ defmodule Traverse.Mapper do
     |> wrapped(transformer).()
   end
 
-  defp mapall_post(%{__struct__: type}=ds, transformer) do
+  defp mapall_post(%{__struct__: _type}=ds, transformer) do
     ds
     |> Map.delete(:__struct__)
     |> mapall_post(transformer)
