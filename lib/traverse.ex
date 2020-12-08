@@ -261,8 +261,9 @@ defmodule Traverse do
     do: Traverse.Filter.filter!(ds, filter_fn)
 
   @spec map(any, t_simple_mapper_fn) :: any
-  def map(ds, mapper_fn),
-    do: Traverse.Mapper.map(ds, mapper_fn)
+  def map(ds, mapper_fn) do
+    Traverse.Mapper.map(ds, mapper_fn)
+  end
 
   @spec map!(any, t_simple_mapper_fn) :: any
   def map!(ds, mapper_fn),

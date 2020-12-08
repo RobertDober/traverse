@@ -29,6 +29,11 @@ defmodule Traverse.MapTest do
     test "empty map" do
       assert map(%{}, &error/1) == %{}
     end
+
+    test "flat map" do
+      expected = %{a: 1, b: 2}
+      assert map(%{a: 0, b: 1}, &increment/1) == expected
+    end
   end
 
   describe "map deep data structures" do
