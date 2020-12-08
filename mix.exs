@@ -1,11 +1,13 @@
 defmodule Traverse.Mixfile do
   use Mix.Project
 
+  @version "1.1.0"
+  @url "https://github.com/RobertDober/traverse"
   def project do
     [
       app: :traverse,
-      version: "1.0.1",
-      elixir: "~> 1.9",
+      version: @version,
+      elixir: "~> 1.10",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -18,7 +20,8 @@ defmodule Traverse.Mixfile do
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      deps: deps()
+      deps: deps(),
+      aliases: [docs: &build_docs/1]
     ]
   end
 
@@ -50,13 +53,35 @@ defmodule Traverse.Mixfile do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.19", only: :dev},
       {:excoveralls, "~> 0.12", only: :test},
-      {:dialyxir, "~> 0.5", only: [:dev, :test]}
+      {:dialyxir, "~> 1.0", only: [:dev, :test]}
       # { :read_doc, "~> 0.1",  only: :dev, path: "/home/robert/log/elixir/read_doc" },
     ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  @prerequisites """
+  run `mix escript.install hex ex_doc` and adjust `PATH` accordingly
+  """
+  @module "Traverse"
+  defp build_docs(_) do
+    Mix.Task.run("compile")
+    ex_doc = Path.join(Mix.path_for(:escripts), "ex_doc")
+    Mix.shell().info("Using escript: #{ex_doc} to build the docs")
+
+    unless File.exists?(ex_doc) do
+      raise "cannot build docs because escript for ex_doc is not installed, make sure to \n#{
+              @prerequisites
+            }"
+    end
+
+    args = [@module, @version, Mix.Project.compile_path()]
+    opts = ~w[--main #{@module} --source-ref v#{@version} --source-url #{@url}]
+
+    Mix.shell().info("Running: #{ex_doc} #{inspect(args ++ opts)}")
+    System.cmd(ex_doc, args ++ opts)
+    Mix.shell().info("Docs built successfully")
+  end
 end
