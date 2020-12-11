@@ -56,7 +56,7 @@ defmodule Traverse.Mapper do
   end
   defp _map([%{}=mp|rest], transformer, result) do
     # IO.inspect(mp.__struct__, label: :map)
-    case _make_pairs(mp) do
+    case Pair.make_pairs(mp) do
       [h|t] -> mapx([h, Open.new(t)|rest], transformer, [Maker.make_map(Map.get(mp, :__struct__))|result])
     end
   end
@@ -97,11 +97,6 @@ defmodule Traverse.Mapper do
     _close(rest, [head|intermed])
   end
 
-  defp _make_pairs(map) do
-    map
-    |> Map.to_list
-    |> Enum.map(&Pair.new(&1))
-  end
     @doc """
     Implementation of `Traverse.mapall`
     """

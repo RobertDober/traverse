@@ -2,10 +2,16 @@ defmodule Traverse.Pair do
   defstruct key: nil, value: nil
 
 
+  def make_pairs(map) do
+    map
+    |> Map.to_list
+    |> Enum.map(&new/1)
+  end
+
+  def new(key_value)
   def new({key, value}) do
     %__MODULE__{key: key, value: value}
   end
-
   def new(key, value) do
     %__MODULE__{key: key, value: value}
   end

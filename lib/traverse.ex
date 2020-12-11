@@ -2,6 +2,9 @@ defmodule Traverse do
   use Traverse.Types
   use Traverse.Macros
 
+  alias Traverse.Maker
+  alias Traverse.Pair
+
   @moduledoc """
   # Traverse is a toolset to walk arbitrary Elixir Datastructures.
 

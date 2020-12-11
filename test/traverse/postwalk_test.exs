@@ -16,13 +16,6 @@ defmodule Traverse.WalkerTest do
     end
   end
 
-  describe "prewalk" do
-    test "cutting (edge?)" do
-      result = Traverse.Walker.walk( {1, [2, %{a: 3}, 4], 5}, 0, &add_with_cut/2 )
-      assert result == 12
-    end
-  end
-
   defp collector(ele, acc), do: [ele | acc]
 
   defp add_with_cut(ele, acc)
