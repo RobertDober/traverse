@@ -4,6 +4,11 @@ defmodule Traverse.MapTest do
 
   doctest Traverse.Mapper
 
+  defmodule Pair do
+    defstruct lhs: 0, rhs: 1
+  end
+
+
   describe "map flat data structures" do
     test "flat list" do
       flat = [:a, "hello", 42]
@@ -41,6 +46,11 @@ defmodule Traverse.MapTest do
       ds = [:a, {:b, 1, [c: 2], %{:a => {0}, 2 => [1, :c]}}, 41]
       expected = [:a, {:b, 2, [c: 3], %{:a => {1}, 2 => [2, :c]}}, 42]
       # N.B. Keys are not transformed
+      assert map(ds, &increment/1) == expected
+    end
+    test "structs, Keywords" do
+      ds       = [[a: %Pair{}, b: { %Pair{lhs: 20}, 41, %{a: 42, b: [1, 2, 3]} }], [%Pair{}, 99]]
+      expected = [[a: %Pair{lhs: 1, rhs: 2}, b: { %Pair{lhs: 21, rhs: 2}, 42, %{a: 43, b: [2, 3, 4]} }], [%Pair{lhs: 1, rhs: 2}, 100]]
       assert map(ds, &increment/1) == expected
     end
   end

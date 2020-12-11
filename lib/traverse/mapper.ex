@@ -17,62 +17,77 @@ defmodule Traverse.Mapper do
   """
   @spec map(any, t_simple_mapper_fn) :: any
   def map(ds, transformer) do
+    # IO.puts("\n**************************************************")
     mapx([ds], transformer, [])
   end
 
   defp mapx(data, transformer, result) do
-    IO.inspect({data, result})
+#    IO.inspect({data, result})
     _map(data, transformer, result)
   end
 
   defp _map(data, transformer, result)
   defp _map([], _transformer, result), do: result |> List.first 
   defp _map([[]|rest], transformer, result) do
-    IO.inspect(:empty_list)
+#    IO.inspect(:empty_list)
     mapx(rest, transformer,[[]|result])
   end
+  defp _map([%Open{data: []}|rest], transformer, result) do
+#    IO.inspect(:closing)
+    mapx(rest, transformer, _close(result))
+  end
+  defp _map([%Open{}=open|rest], transformer, result) do
+#    IO.inspect(:pushing)
+    {head, open_with_tail} = Open.pop(open)
+    mapx([head, open_with_tail|rest], transformer, result)
+  end
   defp _map([%Pair{key: :__struct__}|rest], transformer, result) do
-    IO.inspect(:ignore_struct)
+#    IO.inspect(:ignore_struct)
     mapx(rest, transformer, result)
   end
   defp _map([%Pair{key: key, value: value}|rest], transformer, result) do
-    IO.inspect(:pair)
-    mapx([value|rest], transformer, [Maker.make_pair(key)|result])
+#    IO.inspect(:pair)
+    mapx([value, Open.new([])|rest], transformer, [Maker.make_pair(key)|result])
+    # mapx([value|rest], transformer, [Maker.make_pair(key)|result])
   end
   defp _map([%{}=mp|rest], transformer, result) when mp == %{} do
-    IO.inspect(:empty_map)
+#    IO.inspect(:empty_map)
     mapx(rest, transformer, [%{}, result])
   end
   defp _map([%{}=mp|rest], transformer, result) do
+    # IO.inspect(mp.__struct__, label: :map)
     case _make_pairs(mp) do
-      [h|t] -> mapx([h, Open.new(t)|rest], transformer, [Maker.make_map|result])
+      [h|t] -> mapx([h, Open.new(t)|rest], transformer, [Maker.make_map(Map.get(mp, :__struct__))|result])
     end
   end
   defp _map([[h|t]|rest], transformer, result) do
-    IO.inspect(:open_list)
+#    IO.inspect(:open_list)
     mapx([h,Open.new(t)|rest], transformer, [Maker.make_list|result])
   end
   defp _map([tpl|rest], transformer, result) when is_tuple(tpl) do
-    IO.inspect(:tuple)
+#    IO.inspect(:tuple)
     case Tuple.to_list(tpl) do
       [] -> mapx(rest, transformer,[{}|result])
       [h|t] -> mapx([h, Open.new(t)|rest], transformer, [Maker.make_tuple|result])
     end
   end
-  defp _map([%Open{data: []}|rest], transformer, result) do
-    IO.inspect(:closing)
-    mapx(rest, transformer, _close(result))
-  end
-  defp _map([%Open{}=open|rest], transformer, result) do
-    IO.inspect(:pushing)
-    {head, open_with_tail} = Open.pop(open)
-    mapx([head, open_with_tail|rest], transformer, result)
-  end
   defp _map([scalar|rest], transformer, result) do
-    IO.inspect(:transforming)
-    mapx(rest, transformer, [transformer.(scalar) | result])
+#    IO.inspect(:transforming)
+    transformed = transformer.(scalar)
+    result1 = 
+      if Traverse.Ignore.me?(transformed), do: result, else: [transformed | result]
+    mapx(rest, transformer, result1)
   end
 
+  @doc """
+  Like map, however all FunctionClauseErrors are intercepted and replaced by the identity function
+
+  Thusly we can observe that
+
+      iex>
+  """
+  @spec map(any, t_simple_mapper_fn) :: any
+  def map!(ds, transformer), do: map(ds, wrapped(transformer))
   defp _close(result, intermed \\ [])
   defp _close([], _intermed), do: raise(Traverse.InternalError, "_close did not find a maker on the stack")
   defp _close([%Maker{function: maker}|rest], intermed) do
@@ -86,9 +101,6 @@ defmodule Traverse.Mapper do
     map
     |> Map.to_list
     |> Enum.map(&Pair.new(&1))
-  end
-  defp _transform(value, transformer) do
-    if Traverse.Ignore.me?(value), do: value, else: transformer.(value)
   end
     @doc """
     Implementation of `Traverse.mapall`

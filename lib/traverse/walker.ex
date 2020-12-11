@@ -52,6 +52,13 @@ defmodule Traverse.Walker do
       15
 
   The traversal function can avoid recursive descent by returning its accumulator value boxed in a `%Cut{acc: acc}` struct.
+  However, in order to avoid the verbose `%Cut{acc: acc}`, `Traverse.cut(acc)` can be used
+
+      iex(2)>  Traverse.Walker.walk( {1, [2, %{a: 3}, 4], 5}, 0,
+      ...(2)>                        fn (mp, acc) when is_map(mp) -> Traverse.cut(acc)
+      ...(2)>                           (n, acc) when is_number(n) -> acc + n
+      ...(2)>                            _, acc                    -> acc end )
+      12 
   """
   @spec walk(any, any, t_simple_walker_fn) :: any
   def walk(coll, acc, collector)
