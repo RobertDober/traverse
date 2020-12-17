@@ -1,17 +1,14 @@
-defmodule Traverse.Mapper do
+defmodule Support.Collector do
   @behaviour Traverse.VisitorBehavior 
 
-  @spec start_link() :: {:ok, pid()}
   def start_link do
     Agent.start_link(fn -> [] end, name: __MODULE__)
   end
 
-  @spec result() :: list()
-  def result do
+  def messages do
      Agent.get(__MODULE__, &Enum.reverse(&1))
   end
 
-  @spec push(any()) :: :ok
   def push(value) do
     Agent.update(__MODULE__, fn list -> [value|list] end)
   end
@@ -70,5 +67,4 @@ defmodule Traverse.Mapper do
     push(:close_tuple)
     :ok
   end
-  
 end

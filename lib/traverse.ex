@@ -1,279 +1,232 @@
 defmodule Traverse do
   use Traverse.Types
-  use Traverse.Macros
 
-  alias Traverse.Maker
-  alias Traverse.Pair
+  alias Traverse.Wrapper
+
 
   @moduledoc """
-  # Traverse is a toolset to walk arbitrary Elixir Datastructures.
+  # Traverse... arbitrary Elixir Datastructures.
 
-  ## Walking The Whole Structure
+  ## Synopsis
 
-  `walk` visits all substructures down to atomic elements.
+  `Traverse` exposes functions to, surprise, surprise, traverse arbitrary Elixir datastructures.
 
-       iex(1)> ds = [:a, {:b, 1, 2}, [:c, 3, 4, 5]]
-       ...(1)> collector =  fn ele, acc when is_atom(ele) or is_number(ele) -> [ele|acc]
-       ...(1)>                 _,   acc                    -> acc       end
-       ...(1)> Traverse.walk(ds, [], collector)
-       [5, 4, 3, :c, 2, 1, :b, :a]
+  And with arbitrary datastructures we mean any combination of lists, maps, tuples and structs. 
 
-  But substructures are of course visited too:
+  ## Overview
 
-      iex(2)> ds = [:a, {:b, 1, 2}, [:c, 3, 4, 5]]
-      ...(2)> collector = fn ele, acc -> [ele|acc] end
-      ...(2)> Traverse.walk(ds, [], collector) |> Enum.reverse
-      [[:a, {:b, 1, 2}, [:c, 3, 4, 5]], :a, {:b, 1, 2}, :b, 1, 2, [:c, 3, 4, 5], :c, 3, 4, 5] 
+  ### Visitor and Reducer Pattern
 
-  This example shows that the default visiting strategy is depth first
-  and prewalk, in other words, the algorithm is descending the leftmost path, calling the visiting
-  function _before_ descending.
+  Firstly there is `visit`, which implements the classic visitor pattern. It accepts a `visitor`,
+  which needs to implement `Traverse.VisitorBehavior` (this is not a typo but _en-us_ is my choice of language
+  and when _en-en_ is used it is by pure ignorance and YHS would be happy to be adverted of it)
+  Then `visit` traverses a given datastructure and invokes the function corresponding to each event.
 
-  We can however instruct it to use a postwalk strategy as follows
+  E.g. given the following datastructure
 
-      iex(3)> ds = [:a, [:c, 3]]
-      ...(3)> collector = fn ele, acc -> [ele|acc] end
-      ...(3)> Traverse.walk(ds, [], collector, postwalk: true)
-      [[:a, [:c, 3]], [:c, 3], 3, :c, :a]
+  ```elixir
+  visit([ {:a, %{k: 1}, :b} ], visitor)
+  ```
 
-       
-  For the time being the depth first strategy cannot be changed.
-  
-  ### Cutting substructures off
+  the following function invocations on `visitor` would happen
 
-  Let us say that we do not want to traverse certain, subtrees, as in the following example
-  in which `%TraverseCut{}` is used to cut subtrees if which the key is `:ignore`:
+  ```elixir
+  open_list, open_tuple, scalar(:a), open_map, open_tuple, scalar(:k), scalar(1), close_tuple, close_map, scalar(:b), close_tuple, close_list
+  ```
 
-      iex(4)> ds = %{a: %{ignore: [1, 3, 4]}, b: 10, c: %{e: 20, d: [f: 30, ignore: 1000]}}
-      ...(4)> collector = fn 
-      ...(4)>   ele, acc when is_number ele -> acc + ele
-      ...(4)>   {:ignore, _}, acc -> %Traverse.Cut{acc: acc}
-      ...(4)>   _  , acc -> acc end
-      ...(4)> Traverse.walk(ds, 0, collector)
-      60
+  Secondly there is `reduce` which implements a functional traversal. It accepts an intital accumulator and a reducer function which will be called
+  with an event, value tuple and the accumulator like so:
 
-  In postwalk scenarii this does not make any sense of course, also note the use of the shortcut
-  `Traverse.cut`
+  ```elixir
+  reduce([ {:a, %{k: 1}, :b} ], acc, reducer)
+  ```
 
-      iex(5)> ds = %{a: [1, 2], ignore: [3, 4]}
-      ...(5)> collector = fn 
-      ...(5)>   ele, acc when is_number ele -> acc + ele
-      ...(5)>   {:ignore, _}, acc -> Traverse.cut(acc)
-      ...(5)>   _  , acc -> acc end
-      ...(5)> Traverse.walk(ds, 0, collector, postwalk: true)
-      %Traverse.Cut{acc: 10}
+  Will call reducer with the following values:
 
-  Therefore postwalk does not even unbox the Cut struct which might lead to errors we used
-  this example only to show that when the cut is applied the accumulator has already added
-  the values from the substructure.
+  ```elixir
+  reducer {:open_list, nil}, acc -> acc1
+  reducer {:open_tuple, nil}, acc1 -> acc2
+  reducer {:scalar, :a}, acc2      -> acc3
+  reducer {:open_map, nil}, acc3   -> acc4
+  reducer {:open_tuple, ...
+  reducer {:scalar, :k},...
+  reducer {:scalar, 1}, ...
+  reducer {:close_tuple, nil}, ...
+  ...
+  ```
 
+  These two _main_ functions are of course enough to implement any imaginable transformation of an arbitrary datastructure, however many
+  routinely useful transformations like mapping, flatmapping or filtering would need a lot of boiler plate code to be implemented in the
+  reducer or visitor all the time.
 
-  ### Partial functions
+  For this reason `Traverse` has done the work behind the scenes to expose these common patterns to simple _mapper_ or _filter_ functions
 
+  ### Mapper Interface
 
-  The astuce reader might have noticed that most of our collector functions above
-  had a default clause like that:
+  We distinguish between three different types of mappers.
 
-       _, acc -> acc end
+  - Flat -> `flat_map`
+  - Structure Preserving Leaves Mapping (meaning scalar events) -> `map_leaves`
+  - Full Mapping on All Nodes -> `map_all`
 
+  While the `flat_map` function is actually trivial to implement with `reduce` its implementation is quite instructive
 
-  It is tempting to complete partial collector functions this way automatically.
+  ```elixir
+  def flat_map(ds, mapper) do
+  reduce(ds, [], fn {:scalar, value}, acc -> [mapper.(value)|acc],
+  _,                acc -> acc end)
+  |> Enum.reverse
+  end
+  ```
 
-  However this has major downsides:
-   - application errors are masked by the rescue clause
-   - stack traces are harder to read
-   - runtime increases
+  `map_leaves` of course has to recreate the structure and cannot be sketched out like that, but here is what it does:
 
-  That said, especially in iex sessions it might be useful to be able doing this.
-  Enter the bang version: `walk!`
+  ```elixir
+    iex(0)> map_leaves([{1, %{b: 2}, 3}],
+    ...(0)>   fn n when is_number(n) -> n + 1,
+    ...(0)>      x -> x end # needed as map keys are passed in 
+    [{2, %{b: 3}, 4}]
+  ```
 
-      iex(6)> ds = %{a: 1, b: 2}
-      ...(6)> Traverse.walk!(ds, 0, fn ele, acc when is_number(ele) -> ele + acc end)
-      3
+  There is a convenience version of `map_leaves` that is slower and might hide subtle errors as it wraps your mapper into
+  a function that catches `FunctionClauseError` exceptions and mimics the identity function.
+  Often, though, it is good enough
 
-  Just to show the difference with the unbanged version of `walk`:
+  ```elixir
+    iex(1)> map_leaves!([{1, %{b: 2}, 3}], fn n when is_number(n) -> n + 1 end)
+    [{2, %{b: 3}, 4}]
+  ```
 
-      iex(7)> ds = %{a: 1, b: 2}
-      ...(7)> try do
-      ...(7)>   Traverse.walk(ds, 0, fn ele, acc when is_number(ele) -> ele + acc end)
-      ...(7)> rescue
-      ...(7)>   FunctionClauseError -> :rescued 
-      ...(7)> end
-      :rescued
+  However this contrived example is just a bad use case, as e.g. it would not catch non numeric scalar values that are,
+  allegedly not expected, that is why actually the option `ignore_keys: true` should have been passed in:
 
+  ```elixir
+    iex(2)> map_leaves([{1, %{b: 2}, 3}], &(&1+1), ignore_keys: true)
+    [{2, %{b: 3}, 4}]
+  ```
 
-  The bang version can also be used with `postwalk: true` of course.
-
-      iex(8)> ds = %{a: 1, b: 2}
-      ...(8)> Traverse.walk!(ds, 0, fn ele, acc when is_number(ele) -> ele + acc end, postwalk: true)
-      3
-
-
-  ## Mapping
-
-  While walking implements the most general way to traverse common data structures it does not preserve
-  the structure of the walked data structure by itself.
-
-  Mapping will descend the data structure and copy it, but apply the mapper function **only** to leaves.
-
-  Therefore it is sufficient to define the __mapper__ function for the type of leave values only.
-
-  However, while map keys are not leaves, keyword lists are just list of tuples and as such the __keys__ are
-  considered leaves too.
-
-      iex(9)> ds = [ a: 1, b: %{ c: [1, 2], d: [e: 100, f: 200] } ]
-      ...(9)> mapper = fn x when is_number(x) -> x + 1
-      ...(9)>             x when is_atom(x)   -> to_string(x)
-      ...(9)>             x                   -> x      end
-      ...(9)> Traverse.map(ds, mapper)
-      [{"a", 2}, {"b", %{c: [2, 3], d: [{"e", 101}, {"f", 201}]}}]
-
-
-  ### Partial functions
-
-  As seen above it might again be convenient to automatically replace undefined parts
-  of the mapper function with the identity function, and the banged version, `map!` is
-  just doing that
-
-
-      iex(10)> ds = [ a: 1, b: %{ c: [1, 2], d: [e: 100, f: 200] } ]
-      ...(10)> Traverse.map!(ds, fn x when is_number(x) -> x + 1 end)
-      [ a: 2, b: %{ c: [2, 3], d: [e: 101, f: 201] } ]
-
-
-  ### Structural Preserving Traversal
-
-
-  While `walk` is a general way of traversing data structures, and `map` is a convenient way
-  of applying changes to leaves only, `mapall` is a compromise between both.
-
-  If `walk` just copies the structure of the data structure into its accumulator, `mapall` does
-  this automatically by applying the _mapper_ function to the copied data structure.
-
-  This is done via a trick which might cause some confiusion in debugging, while `mapall` does not
-  complete the definition of the __mapper__ function like `walk!` and `map!` it still rescues
-  `FunctionClauseError` when applying __mapper__ to __inner__ nodes.
-
-  Therefore
-
-      iex(11)> ds = [ %{a: 1, b: 2}, [3]]
-      ...(11)> mapper = fn x when is_number(x) -> x + 1 end
-      ...(11)> Traverse.mapall(ds, mapper)
-      [%{a: 2, b: 3}, [4]]
-
-  But
-
-      iex(12)> ds = [ %{a: 1, b: 2}, [3]]
-      ...(12)> try do
-      ...(12)>   Traverse.mapall(ds, &(&1 + 1))
-      ...(12)> rescue
-      ...(12)>    _ -> :rescued
-      ...(12)> end
-      :rescued
-
-  And
-      iex(13)> ds = [ %{a: 1, b: :hello}, [3]]
-      ...(13)> mapper = fn x when is_number(x) -> x + 1 end
-      ...(13)> try do
-      ...(13)>   Traverse.mapall(ds, mapper)
-      ...(13)> rescue
-      ...(13)>    _ -> :rescued
-      ...(13)> end
-      :rescued
-
-
-  ## Filtering
-
-
-  Filtering could be implemented by `mapall` and a traversal function that returns either
-  an `Ignore` value or the input paramater. Let us demonstrate with the following example
-
-      iex(14)> ds = [ %{a: 1}, [2, 3] ]
-      ...(14)> odd_list_elements = fn x when is_number(x) -> if rem(x, 2) == 1, do: x, else: Traverse.Ignore  
-      ...(14)>                        x when is_list(x)   -> x
-      ...(14)>                        _                   -> Traverse.Ignore end
-      ...(14)> Traverse.mapall(ds, odd_list_elements)
-      [ [3] ]
-
-  `Traverse` filter removes lots of the boilerplate
-
-      iex(15)> ds = [ %{a: 1}, [2, 3] ]
-      ...(15)> odd_list_elements = fn x when is_number(x) -> rem(x,2) == 1
-      ...(15)>                        x                   -> is_list(x) end
-      ...(15)> Traverse.filter(ds, odd_list_elements)
-      [ [3] ]
-
-
-   As with `map` and `walk` there is the bang version, accepting partial filter functions
-
-
-       iex(16)> number_arrays = fn x when is_number(x) -> true
-       ...(16)>                    l when is_list(l)   -> true end
-       ...(16)> Traverse.filter!([:a, {1, 2}, 3, [4, :b]], number_arrays)
-       [3, [4]]
+  This option concerns maps **and** structs.
   """
 
   @doc """
-  A convinient shortcut
-     
-       iex(17)> Traverse.cut(42)
-       %Traverse.Cut{acc: 42}
+  map_leaves a structural perserving transformation of leave nodes
   """
-  def cut(value), do: %Traverse.Cut{acc: value}
-
-  @spec walk(any, any, t_simple_walker_fn, Keyword.t()) :: any
-  def walk(ds, initial_acc, walker_fn, options \\ [])
-
-  def walk(ds, initial_acc, walker_fn, postwalk: true),
-    do: Traverse.Walker.postwalk(ds, initial_acc, walker_fn)
-
-  def walk(ds, initial_acc, walker_fn, _),
-    do: Traverse.Walker.walk(ds, initial_acc, walker_fn)
-
-  def walk!(ds, initial_acc, walker_fn, options \\ [])
-
-  def walk!(ds, initial_acc, walker_fn, postwalk: true),
-    do: Traverse.Walker.postwalk!(ds, initial_acc, walker_fn)
-
-  def walk!(ds, initial_acc, walker_fn, _),
-    do: Traverse.Walker.walk!(ds, initial_acc, walker_fn)
-
-  @spec filter(any, t_simple_filter_fn) :: any
-  def filter(ds, filter_fn),
-    do: Traverse.Filter.filter(ds, filter_fn)
-
-  @spec filter!(any, t_simple_filter_fn) :: any
-  def filter!(ds, filter_fn),
-    do: Traverse.Filter.filter!(ds, filter_fn)
-
-  @spec map(any, t_simple_mapper_fn) :: any
-  def map(ds, mapper_fn) do
-    Traverse.Mapper.map(ds, mapper_fn)
+  @spec map_leaves(any(), leave_mapper_t(), Keyword.t()) :: any()
+  def map_leaves(ds, mapper, opts \\ []) do
+    ds
   end
 
-  @spec map!(any, t_simple_mapper_fn) :: any
-  def map!(ds, mapper_fn),
-    do: Traverse.Mapper.map!(ds, mapper_fn)
+  @doc """
+  map_leaves! like map but ignores `FunctionClauseError` exceptions
+  """
+  @spec map_leaves!(any(), leave_mapper_t(), Keyword.t()) :: any()
+  def map_leaves!(ds, mapper, opts \\ []) do
+    map_leaves(ds, _wrap(mapper), opts)
+  end
 
-  @spec mapall(any, t_simple_mapper_fn, Keyword.t()) :: any
-  def mapall(ds, mapper_fn, options \\ []),
-    do: Traverse.Mapper.mapall(ds, mapper_fn, Keyword.get(options, :post, false))
+  @doc """
+  reduce functional traversal
+  """
+  @spec reduce(any(), any(), reducer_t()) :: any()
+  def reduce(ds, accumulator, reducer), do: _reduce({[ds], accumulator, reducer})
 
-  # @doc """
-  #   `zipfn` augments each node and leaf in the data structure, replacing it with the pair
-  #   containing its original value and the result of the function applied to the node.
+  @doc """
+  visit event based traversal
+  """
+  @spec visit(any(), any()) :: :ok
+  def visit(ds, visitor), do: _visit({[ds], visitor})
 
-  #   As very often we will be interested in only some specific values we can, as usually,
-  #   define a partial zip function, the `default` value is used to complete the zip
-  #   function with a constant function returning this value, the `default` defaults to nil.
+  @spec _reduce(reducer_triple()) :: any()
+  defp _reduce(stack_accumulator_reducer)
+  defp _reduce({[h|t]=stack, accumulator, reducer}) when is_struct(h) do
+    case h do
+      %Wrapper.List{}   -> _red(h, stack, accumulator, reducer)
+      %Wrapper.Map{}    -> _red(h, stack, accumulator, reducer)
+      %Wrapper.Struct{} -> _red(h, stack, accumulator, reducer)
+      %Wrapper.Tuple{}  -> _red(h, stack, accumulator, reducer)
+      _      -> _reduce({[Wrapper.Struct.new(h) | t], accumulator, reducer})
+    end
+  end
+  defp _reduce({[h|t], accumulator, reducer}) when is_list(h) do
+    _reduce({[Wrapper.List.new(h)|t], accumulator, reducer})
+  end
+  defp _reduce({[h|t], accumulator, reducer}) when is_map(h) do
+    _reduce({[Wrapper.Map.new(h)|t], accumulator, reducer})
+  end
+  defp _reduce({[h|t], accumulator, reducer}) when is_tuple(h) do
+    _reduce({[Wrapper.Tuple.new(h)|t], accumulator, reducer})
+  end
+  defp _reduce({[h|t], accumulator, reducer}) do
+    _reduce({t, reducer.(h, accumulator), reducer})
+  end
+  defp _reduce({[], accumulator, _reducer}) do
+    accumulator
+  end
 
-  #   iex> Tranverse.zip([1, {:a, 2}, %{b: 3, c: "hello"}],
-  #   ...>   fn x when is_number(x) -> x + 1 end)
-  #   [{1, 2}, {a: 2]end
+  defp _reduce_with_open_struct(a_struct, tail, accumulator, reducer) do
+    acc1 = reducer.({:open_struct, a_struct}, accumulator)
+    _reduce({tail, acc1, reducer})
+  end
+  # @spec _visitx({list(), any()}) :: :ok
+  # defp _visitx({ds, _}=pair) do
+    #   IO.puts "================================================================================"
+    #   IO.inspect(ds)
+    #   _visit(pair)
+    # end
+    @spec _visit({list(), module()}) :: :ok
+    defp _visit(stack_visitor_pair)
+    defp _visit({[h|t]=stack, visitor}) when is_struct(h) do
+      case h do
+        %Wrapper.List{}   -> _pop(h, stack, visitor)
+        %Wrapper.Map{}    -> _pop(h, stack, visitor)
+        %Wrapper.Struct{} -> _pop(h, stack, visitor)
+        %Wrapper.Tuple{}  -> _pop(h, stack, visitor)
+        _      -> _visit(_make_struct(h, t, visitor))
+      end
+    end
+    defp _visit({[h|t], visitor}) when is_list(h) do
+      visitor.open_list
+      _visit({[Wrapper.List.new(h)|t], visitor})
+    end
+    defp _visit({[h|t], visitor}) when is_map(h) do
+      visitor.open_map
+      _visit({[Wrapper.Map.new(h)|t], visitor})
+    end
+    defp _visit({[h|t], visitor}) when is_tuple(h) do
+      visitor.open_tuple
+      _visit({[Wrapper.Tuple.new(h)|t], visitor})
+    end
+    defp _visit({[h|t], visitor}) do
+      visitor.scalar(h)
+      _visit({t, visitor})
+    end
+    defp _visit({[], _visitor}), do: :ok
 
-  # """
-  # @spec zip( any, t_simple_mapper_fn, any ) :: any
-  # def zip(ds, zipfn, default \\ nil)
+    @spec _make_struct(map(), list(), module()) :: {list(), module()}
+    defp _make_struct(a_struct, tail, visitor) do
+      struct = Wrapper.Struct.new(a_struct)
+      visitor.open_struct(struct.struct)
+      {[struct | tail], visitor}
+    end
+
+    @spec _pop(map(), list(), module()) :: :ok
+    defp _pop(a_struct, stack, visitor) do
+      _visit(a_struct.__struct__.pop(stack, visitor))
+    end
+
+    @spec _red(Wrapper.t(), nonempty_maybe_improper_list(), list(), reducer_t()) :: :ok
+    defp _red(a_struct, stack, accumulator, reducer) do
+      _reduce(a_struct.__struct__.red(stack, accumulator, reducer))
+    end
+
+    @spec _wrap(leave_mapper_t()) :: leave_mapper_t()
+    defp _wrap(fun) do
+      fn x -> 
+      try do
+        fun.(x)
+      rescue
+        FunctionClauseError -> x
+      end
+      end
+    end
 end
-
-# SPDX-License-Identifier: Apache-2.0

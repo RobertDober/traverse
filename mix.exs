@@ -1,7 +1,7 @@
 defmodule Traverse.Mixfile do
   use Mix.Project
 
-  @version "1.1.0"
+  @version "2.0.0"
   @url "https://github.com/RobertDober/traverse"
   def project do
     [
@@ -54,8 +54,8 @@ defmodule Traverse.Mixfile do
   defp deps do
     [
       {:excoveralls, "~> 0.12", only: :test},
-      {:dialyxir, "~> 1.0", only: [:dev, :test]}
-      # { :read_doc, "~> 0.1",  only: :dev, path: "/home/robert/log/elixir/read_doc" },
+      {:dialyxir, "~> 1.0", only: [:dev, :test]},
+      {:extractly, "~> 0.2.0", only: [:dev, :test]},
     ]
   end
 

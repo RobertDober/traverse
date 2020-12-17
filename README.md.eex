@@ -1,0 +1,28 @@
+
+<%= xtra.do_not_edit_warning template: template %>
+
+![CI](https://github.com/RobertDober/traverse/workflows/CI/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/RobertDober/traverse/badge.svg?branch=master)](https://coveralls.io/github/RobertDober/traverse?branch=master)
+[![Hex.pm](https://img.shields.io/hexpm/v/traverse.svg)](https://hex.pm/packages/traverse)
+[![Hex.pm](https://img.shields.io/hexpm/dw/traverse.svg)](https://hex.pm/packages/traverse)
+[![Hex.pm](https://img.shields.io/hexpm/dt/traverse.svg)](https://hex.pm/packages/traverse)
+[![Inline docs](http://inch-ci.org/github/RobertDober/traverse.svg?branch=master)](http://inch-ci.org/github/RobertDober/traverse)
+
+**N.B.**
+
+This README contains the docstrings and doctests from the code by means of [extractly](https://hex.pm/packages/extractly)
+and the following code examples are therefor verified with `ExUnit` doctests.
+
+<%= xtra.moduledoc "Traverse" %>
+
+## Author
+
+Copyright © 2016,7,8,9, 2020,1 Robert Dober
+robert.dober@gmail.com
+
+# LICENSE
+
+Same as Elixir, which is Apache License v2.0. Please refer to [LICENSE](LICENSE) for details.
+
+SPDX-License-Identifier: Apache-2.0
+

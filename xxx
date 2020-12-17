@@ -1,0 +1,27 @@
+Compiling 1 file (.ex)
+Excluding tags: [:test]
+Including tags: [line: "5"]
+
+
+Test.Traverse.VisitTest [test/visit_test.exs]
+  * test a complex ds with collector [L#6]================================================================================
+[[1, %{a: [2, 3]}, {4, 5}]]
+================================================================================
+[%Traverse.Wrapper.List{content: [1, %{a: [2, 3]}, {4, 5}]}]
+  * test a complex ds with collector (8.2ms) [L#6]
+
+  1) test a complex ds with collector (Test.Traverse.VisitTest)
+     test/visit_test.exs:6
+     ** (ArgumentError) you attempted to apply a function on %Traverse.Wrapper.List{content: [1, %{a: [2, 3]}, {4, 5}]}. Modules (the first argument of apply) must always be an atom
+     code: Traverse.visit(ds, Collector)
+     stacktrace:
+       :erlang.apply(%Traverse.Wrapper.List{content: [1, %{a: [2, 3]}, {4, 5}]}, :pop, [[%Traverse.Wrapper.List{content: [1, %{a: [2, 3]}, {4, 5}]}], Support.Collector])
+       (traverse 2.0.0) lib/traverse.ex:43: Traverse._visit/1
+       test/visit_test.exs:16: (test)
+
+
+
+Finished in 0.02 seconds
+1 test, 1 failure
+
+Randomized with seed 773231
