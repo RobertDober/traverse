@@ -10,7 +10,7 @@ defmodule Traverse.Wrapper.Tuple do
 
 
   @spec new(tuple()) :: t
-  def new(content) when is_tuple(content), do: %__MODULE__{content: Tuple.to_list(content)}
+  def new(content \\ {}) when is_tuple(content), do: %__MODULE__{content: Tuple.to_list(content)}
 
   @spec pop([t|list()], module) :: {list(), module()}
   def pop(stack, visitor)
@@ -22,13 +22,13 @@ defmodule Traverse.Wrapper.Tuple do
     {[h, %__MODULE__{content: t} | rest], visitor}
   end
 
-  @spec red([t|list()], any(), reducer_t()) :: reducer_triple()
-  def red(stack, accumulator, reducer)
-  def red([%__MODULE__{content: []}|rest], accumulator, reducer) do
+  @spec red([t|list()], any(), reducer_t(), Keyword.t()) :: reducer_tuple()
+  def red(stack, accumulator, reducer, opts)
+  def red([%__MODULE__{content: []}|rest], accumulator, reducer, opts) do
     acc1 = reducer.({:close_tuple, nil}, accumulator)
-    {rest, acc1, reducer}
+    {rest, acc1, reducer, opts}
   end
-  def red([%__MODULE__{content: [h|t]}|rest], accumulator, reducer) do
-    {[h, %__MODULE__{content: t} | rest], accumulator, reducer}
+  def red([%__MODULE__{content: [h|t]}|rest], accumulator, reducer, opts) do
+    {[h, %__MODULE__{content: t} | rest], accumulator, reducer, opts}
   end
 end

@@ -1,74 +1,42 @@
 defmodule Traverse.Mapper do
-  @behaviour Traverse.VisitorBehavior 
+  use Traverse.Types
+  alias Traverse.Wrapper
 
-  @spec start_link() :: {:ok, pid()}
-  def start_link do
-    Agent.start_link(fn -> [] end, name: __MODULE__)
+  @moduledoc false
+
+  @spec flat_mapper(leave_mapper_t()) :: reducer_t()
+  def flat_mapper(mapper) do
+    fn  {:open_list, _}, acc -> [Wrapper.List.new | acc]
+        {:open_tuple, _}, acc -> [Wrapper.Tupple.new | acc]
+        {:close_list, _}, acc -> _close_list(acc)
+        {:close_tuple, _}, acc -> _close_tuple(acc)
+
+        {:scalar ,value}, [wrapper|rest] -> [wrapper.__struct__.push(wrapper, mapper.(value))|rest]
+      _ , _ -> raise "continue here"
+    end
   end
 
-  @spec result() :: list()
-  def result do
-     Agent.get(__MODULE__, &Enum.reverse(&1))
+  @spec leave_mapper(leave_mapper_t()) :: reducer_t()
+  def leave_mapper(mapper) do
+    fn {:scalar, value}, acc -> _add_mapped(value, acc, mapper)
+       _anything, acc        -> acc
+    end
   end
 
-  @spec push(any()) :: :ok
-  def push(value) do
-    Agent.update(__MODULE__, fn list -> [value|list] end)
+  @spec _add_mapped(container_t(), any(), leave_mapper_t()) :: any() 
+  defp _add_mapped(value, acc, mapper) do
+    mapped = mapper.(value)
+    case acc do
+      l when is_list(l) -> [ mapped | l]
+
+    end
   end
 
-  # Implementation
-  @spec scalar(any()) :: :ok
-  def scalar(value) do
-    push(value)
-    :ok
+  defp _close_list(acc)
+  defp _close_list([%Wrapper.List{content: content}]) do
+    Eum.reverse(content)
   end
-
-  @spec open_map() :: :ok
-  def open_map() do
-    push(:open_map)
-    :ok
+  defp _close_list([%Wrapper.List{content: content}, wrapper|rest] do
+    [wrapper.__struct__.push(wrapper, Enum.reverse(content))|rest]
   end
-
-  @spec close_map() :: :ok
-  def close_map() do
-    push(:close_map)
-    :ok
-  end
-
-  @spec open_list() :: :ok
-  def open_list() do
-    push(:open_list)
-    :ok
-  end
-
-  @spec close_list() :: :ok
-  def close_list() do
-    push(:close_list)
-    :ok
-  end
-
-  @spec open_struct(module()) :: :ok
-  def open_struct(module) do
-    push({:open_struct, module})
-    :ok
-  end
-
-  @spec close_struct(module()) :: :ok
-  def close_struct(module) do
-    push({:close_struct, module})
-    :ok
-  end
-
-  @spec open_tuple() :: :ok
-  def open_tuple() do
-    push(:open_tuple)
-    :ok
-  end
-
-  @spec close_tuple() :: :ok
-  def close_tuple() do
-    push(:close_tuple)
-    :ok
-  end
-  
 end

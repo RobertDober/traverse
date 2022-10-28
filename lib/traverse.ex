@@ -1,6 +1,7 @@
 defmodule Traverse do
   use Traverse.Types
 
+  alias Traverse.Mapper
   alias Traverse.Wrapper
 
 
@@ -78,42 +79,51 @@ defmodule Traverse do
   |> Enum.reverse
   end
   ```
+  
+  Thusly
+
+    iex(0)> flat_map([{0, %{b: 1}, {2}}], &(&1+1), ignore_keys: true)
+    [1, 2, 3]
+
 
   `map_leaves` of course has to recreate the structure and cannot be sketched out like that, but here is what it does:
 
-  ```elixir
-    iex(0)> map_leaves([{1, %{b: 2}, 3}],
-    ...(0)>   fn n when is_number(n) -> n + 1,
-    ...(0)>      x -> x end # needed as map keys are passed in 
+    iex(1)> map_leaves([{1, %{b: 2}, 3}],
+    ...(1)>   fn n when is_number(n) -> n + 1,
+    ...(1)>      x -> x end # needed as map keys are passed in 
     [{2, %{b: 3}, 4}]
-  ```
 
   There is a convenience version of `map_leaves` that is slower and might hide subtle errors as it wraps your mapper into
   a function that catches `FunctionClauseError` exceptions and mimics the identity function.
   Often, though, it is good enough
 
-  ```elixir
-    iex(1)> map_leaves!([{1, %{b: 2}, 3}], fn n when is_number(n) -> n + 1 end)
+    iex(2)> map_leaves!([{1, %{b: 2}, 3}], fn n when is_number(n) -> n + 1 end)
     [{2, %{b: 3}, 4}]
-  ```
 
   However this contrived example is just a bad use case, as e.g. it would not catch non numeric scalar values that are,
   allegedly not expected, that is why actually the option `ignore_keys: true` should have been passed in:
 
-  ```elixir
-    iex(2)> map_leaves([{1, %{b: 2}, 3}], &(&1+1), ignore_keys: true)
+    iex(3)> map_leaves([{1, %{b: 2}, 3}], &(&1+1), ignore_keys: true)
     [{2, %{b: 3}, 4}]
-  ```
 
   This option concerns maps **and** structs.
   """
+
+  @doc """
+  all leaves are put into one list, ignore_keys option can be set to exclude keys from maps and structs
+  """
+  @spec flat_map(any(), leave_mapper_t(), Keyword.t()) :: list()
+  def flat_map(ds, mapper, opts \\ []) do
+    reduce(ds, [], Mapper.flat_mapper(mapper), opts)
+     |> Enum.reverse
+  end
 
   @doc """
   map_leaves a structural perserving transformation of leave nodes
   """
   @spec map_leaves(any(), leave_mapper_t(), Keyword.t()) :: any()
   def map_leaves(ds, mapper, opts \\ []) do
-    ds
+    reduce(ds, [], Mapper.leave_mapper(mapper), opts)
   end
 
   @doc """
@@ -127,8 +137,8 @@ defmodule Traverse do
   @doc """
   reduce functional traversal
   """
-  @spec reduce(any(), any(), reducer_t()) :: any()
-  def reduce(ds, accumulator, reducer), do: _reduce({[ds], accumulator, reducer})
+  @spec reduce(any(), any(), reducer_t(), Keyword.t) :: any()
+  def reduce(ds, accumulator, reducer, opts \\ []), do: _reducex({[ds], accumulator, reducer, opts})
 
   @doc """
   visit event based traversal
@@ -136,36 +146,42 @@ defmodule Traverse do
   @spec visit(any(), any()) :: :ok
   def visit(ds, visitor), do: _visit({[ds], visitor})
 
-  @spec _reduce(reducer_triple()) :: any()
+  @spec _reducex(reducer_tuple()) :: any()
+  defp _reducex(stack_accumulator_reducer)
+  defp _reducex({stack, acc, _reducer, _opts}=q) do
+    IO.puts(:stderr, inspect({stack, acc}))
+    _reduce(q)
+  end
+  @spec _reduce(reducer_tuple()) :: any()
   defp _reduce(stack_accumulator_reducer)
-  defp _reduce({[h|t]=stack, accumulator, reducer}) when is_struct(h) do
+  defp _reduce({[h|t]=stack, accumulator, reducer, opts}) when is_struct(h) do
     case h do
-      %Wrapper.List{}   -> _red(h, stack, accumulator, reducer)
-      %Wrapper.Map{}    -> _red(h, stack, accumulator, reducer)
-      %Wrapper.Struct{} -> _red(h, stack, accumulator, reducer)
-      %Wrapper.Tuple{}  -> _red(h, stack, accumulator, reducer)
-      _      -> _reduce({[Wrapper.Struct.new(h) | t], accumulator, reducer})
+      %Wrapper.List{}   -> _red(h, stack, accumulator, reducer, opts)
+      %Wrapper.Map{}    -> _red(h, stack, accumulator, reducer, opts)
+      %Wrapper.Struct{} -> _red(h, stack, accumulator, reducer, opts)
+      %Wrapper.Tuple{}  -> _red(h, stack, accumulator, reducer, opts)
+      _      -> _reducex({[Wrapper.Struct.new(h) | t], accumulator, reducer, opts})
     end
   end
-  defp _reduce({[h|t], accumulator, reducer}) when is_list(h) do
-    _reduce({[Wrapper.List.new(h)|t], accumulator, reducer})
+  defp _reduce({[h|t], accumulator, reducer, opts}) when is_list(h) do
+    _reducex({[Wrapper.List.new(h)|t], accumulator, reducer, opts})
   end
-  defp _reduce({[h|t], accumulator, reducer}) when is_map(h) do
-    _reduce({[Wrapper.Map.new(h)|t], accumulator, reducer})
+  defp _reduce({[h|t], accumulator, reducer, opts}) when is_map(h) do
+    _reducex({[Wrapper.Map.new(h)|t], accumulator, reducer, opts})
   end
-  defp _reduce({[h|t], accumulator, reducer}) when is_tuple(h) do
-    _reduce({[Wrapper.Tuple.new(h)|t], accumulator, reducer})
+  defp _reduce({[h|t], accumulator, reducer, opts}) when is_tuple(h) do
+    _reducex({[Wrapper.Tuple.new(h)|t], accumulator, reducer, opts})
   end
-  defp _reduce({[h|t], accumulator, reducer}) do
-    _reduce({t, reducer.(h, accumulator), reducer})
+  defp _reduce({[h|t], accumulator, reducer, opts}) do
+    _reducex({t, reducer.({:scalar, h}, accumulator), reducer, opts})
   end
-  defp _reduce({[], accumulator, _reducer}) do
+  defp _reduce({[], accumulator, _reducexr, _opts}) do
     accumulator
   end
 
-  defp _reduce_with_open_struct(a_struct, tail, accumulator, reducer) do
+  defp _reduce_with_open_struct(a_struct, tail, accumulator, reducer, opts) do
     acc1 = reducer.({:open_struct, a_struct}, accumulator)
-    _reduce({tail, acc1, reducer})
+    _reducex({tail, acc1, reducer, opts})
   end
   # @spec _visitx({list(), any()}) :: :ok
   # defp _visitx({ds, _}=pair) do
@@ -214,9 +230,9 @@ defmodule Traverse do
       _visit(a_struct.__struct__.pop(stack, visitor))
     end
 
-    @spec _red(Wrapper.t(), nonempty_maybe_improper_list(), list(), reducer_t()) :: :ok
-    defp _red(a_struct, stack, accumulator, reducer) do
-      _reduce(a_struct.__struct__.red(stack, accumulator, reducer))
+    @spec _red(Wrapper.t(), nonempty_maybe_improper_list(), list(), reducer_t(), Keyword.t()) :: any()
+    defp _red(a_struct, stack, accumulator, reducer, opts) do
+      _reducex(a_struct.__struct__.red(stack, accumulator, reducer, opts))
     end
 
     @spec _wrap(leave_mapper_t()) :: leave_mapper_t()
@@ -229,4 +245,11 @@ defmodule Traverse do
       end
       end
     end
+
+
+    @typep param_t :: atom() | number()
+    @spec _xxx(param_t) :: atom()
+    def _xxx(param)
+    def _xxx(0), do: "nil"
+    def _xxx(x), do: x
 end
